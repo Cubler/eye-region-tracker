@@ -34,10 +34,14 @@ window.onload = function() {
     
     var circleCanvas = document.getElementById("circleCanvas");
     var circleContext = circleCanvas.getContext("2d");
-    var r = 250;
-    var xstart = 2*r;
-    var ystart = 2*r;
+    
+    var r = 350;
+    var xstart = window.innerWidth/2;
+    var ystart = r+50;
     var ptSize = 5;
+
+    circleContext.canvas.width = window.innerWidth; 
+    circleContext.canvas.height = 2*r+50;
 		
     circleContext.clearRect(0,0,xstart+r+ptSize, ystart+r+ptSize);
     circleContext.beginPath();
@@ -204,17 +208,15 @@ window.onload = function() {
 
         captureTimeout = setInterval(function(){
             if(featureDetect){
-                sendDataToServer(currentRevol);
+               sendDataToServer(currentRevol);
             }
-        }, 1000);
+        }, 1000*captureRate);
     }
 
     function drawCircle(currentPercent){
         var theta = 2*Math.PI*currentPercent;
         var x = r*Math.cos(theta);
         var y = r*Math.sin(theta);
-        var xstart = 2*r;
-        var ystart = 2*r;
 		
         circleContext.clearRect(0,0,xstart+r+ptSize, ystart+r+ptSize);
         circleContext.beginPath();

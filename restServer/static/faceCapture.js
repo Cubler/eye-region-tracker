@@ -25,7 +25,7 @@ window.onload = function() {
     var fpRevol = revolDuration*fps;
     var currentRevol = 0;
 
-    var captureRate = 30;
+    var captureRate = 4;
     var coordsList = [];
     var revolPostionList = [];
     var animationTimeout;
@@ -34,10 +34,14 @@ window.onload = function() {
     
     var circleCanvas = document.getElementById("circleCanvas");
     var circleContext = circleCanvas.getContext("2d");
+    
     var r = 350;
-    var xstart = r+50+400;
+    var xstart = window.innerWidth/2;
     var ystart = r+50;
     var ptSize = 5;
+
+    circleContext.canvas.width = window.innerWidth; 
+    circleContext.canvas.height = 2*r+100;
 		
     circleContext.clearRect(0,0,xstart+r+ptSize, ystart+r+ptSize);
     circleContext.beginPath();
@@ -204,7 +208,7 @@ window.onload = function() {
 
         captureTimeout = setInterval(function(){
             if(featureDetect){
-                sendDataToServer(currentRevol);
+               sendDataToServer(currentRevol);
             }
         }, 1000/captureRate);
     }
