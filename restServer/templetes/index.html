@@ -28,6 +28,7 @@ $def with (page)
     <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
     <canvas id="save" width="640" height="426"></canvas>
   </div>
+  <input type="number" id="positionChoice" min="0" max="4">
   <button id="getPos">Get Position</button>
   <button id="trackCircle">Track Circle</button>
   <button id="cancelTrack">Cancel Track</button>
@@ -42,6 +43,8 @@ $def with (page)
 <textarea id="coordsList" rows="4" cols="50">
 "Original Text"
 </textarea>
+  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a>
+
 
 $:page
 

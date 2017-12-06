@@ -5,12 +5,27 @@ window.onload = function() {
 	var context = canvas.getContext('2d');
 	var coordsDiv = document.getElementById("coords");
     var coordsListDiv = document.getElementById("coordsList");
-	var videoWRatio = saveVideo.clientWidth/video.clientWidth;
-	var videoHRatio = saveVideo.clientHeight/video.clientHeight;
-
 	var saveCanvas = document.getElementById('save');
 	var saveContext = saveCanvas.getContext('2d');
+
+    var saveWidth = 800
+    var saveHeight = 600
+    
+    saveCanvas.width = saveWidth
+    saveCanvas.height = saveHeight
+    saveVideo.width = saveWidth
+    saveVideo.height = saveHeight
+
+
+    var videoWRatio = saveVideo.clientWidth/video.clientWidth;
+	var videoHRatio = saveVideo.clientHeight/video.clientHeight;
+
+	var positionChoice = document.getElementById("positionChoice");
+
 	var features;
+    
+	var downloadLnk = document.getElementById('downloadLnk');
+	downloadLnk.addEventListener('click', download, false);
 
 	var [lx,ly,lw,lh] = [0,0,0,0];
 	var [rx,ry,rw,rh] = [0,0,0,0];
@@ -20,13 +35,14 @@ window.onload = function() {
 	var faceBoxSide = 0;
 	var faceArray;
 
-    var fps = 30;
+    var fps = 1/2;
     var revolDuration = 5; // seconds
     var fpRevol = revolDuration*fps;
     var currentRevol = 0;
 
-    var captureRate = 4;
+    var captureRate = 1;
     var coordsList = [];
+    var tempCoordsList = [];
     var revolPostionList = [];
     var animationTimeout;
     var captureTimeout;
@@ -35,21 +51,23 @@ window.onload = function() {
     var circleCanvas = document.getElementById("circleCanvas");
     var circleContext = circleCanvas.getContext("2d");
     
+    var offset = 50;
     var r = 350;
+    var xoffset = window.innerWidth/2-offset;
     var xstart = window.innerWidth/2;
-    var ystart = r+50;
+    var ystart = r+offset;
     var ptSize = 5;
 
     circleContext.canvas.width = window.innerWidth; 
-    circleContext.canvas.height = 2*r+50;
+    circleContext.canvas.height = 2*r+2*offset;
 		
-    circleContext.clearRect(0,0,xstart+r+ptSize, ystart+r+ptSize);
+    circleContext.clearRect(0,0,circleContext.canvas.width, circleContext.canvas.height);
     circleContext.beginPath();
     circleContext.arc(xstart,ystart,ptSize,0,2*Math.PI);
 	circleContext.fill();
 		
 	document.getElementById('getPos').addEventListener("click", capture);
-	document.getElementById('trackCircle').addEventListener("click", animateCircle);
+	document.getElementById('trackCircle').addEventListener("click", animateRectPoints);
     document.getElementById('cancelTrack').addEventListener("click", cancelTrack);
 
 	var tracker = new tracking.LandmarksTracker();
@@ -73,7 +91,11 @@ window.onload = function() {
 	            // Left and Right eye
 	            var leftArray = landmarks.slice(23,26);
 	            var rightArray = landmarks.slice(19,22);
-                featureDetect = true;
+                if(landmarks.length < 2){
+					featureDetect = false;
+					return;
+				}
+				featureDetect = true;
 
 	            [lxc,lyc,lw,lh] = targetBoxParams(leftArray,'eye');
 	            [rxc,ryc,rw,rh] = targetBoxParams(rightArray,'eye');
@@ -137,16 +159,22 @@ window.onload = function() {
 
         // Adjust the scale of the box to get a better picture of the eye or face
 	    if(feature=='eye'){
-	      w = w*3;
-	      h = h*6; 
-	    }
+	      w = w*2.5;
+	      h = h*5; 
+	    }if(feature =='face'){
+          h = h*1;
+          yCenter = yCenter*1;
+        }
 	    
 	    return [xCenter,yCenter, w, h]
 
 	  }
 
     function sendDataToServer(currentRevolPostion){
-    	saveContext.clearRect(0,0,saveCanvas.width, saveCanvas.height);
+        if(!featureDetect){
+            return;
+        }    	
+        saveContext.clearRect(0,0,saveCanvas.width, saveCanvas.height);
 	    saveContext.drawImage(saveVideo,0,0,saveCanvas.width,saveCanvas.height);
     	var dataURL = saveCanvas.toDataURL('image/jpeg');
 
@@ -180,8 +208,7 @@ window.onload = function() {
 			success: function(coords){
                     console.log(coords);
         			coordsDiv.value = coords;
-                    coordsList.push(currentRevolPostion + " " + coords +'\n');
-                    revolPostionList.push(currentRevolPostion);
+                    coordsList.push(currentRevolPostion + " " + coords +'\n'); 
                     coordsListDiv.value = coordsList;
         	}, error: function(exception){
     			console.log("Capture Exception: " + exception);
@@ -190,13 +217,16 @@ window.onload = function() {
     }
 
     function capture(){
-        sendDataToServer(currentRevol);
+		drawRectPoints(positionChoice.value);
+		setTimeout(function(){
+	        sendDataToServer(positionChoice.value);
+		}, 500);
     }
 
     function cancelTrack(){
         clearTimeout(captureTimeout);
         clearTimeout(animationTimeout);
-
+        coordsListDiv.value = coordsList;
     }
 
     function animateCircle(){
@@ -210,7 +240,82 @@ window.onload = function() {
             if(featureDetect){
                sendDataToServer(currentRevol);
             }
-        }, 1000*captureRate);
+        }, 1000/captureRate);
+    }
+
+    function animateRectPoints(){
+        var currentPoint = -1;
+        
+        animationTimeout = setInterval(function(){
+            currentPoint = (currentPoint +1) % 5;
+            tempCoordsList = [];
+            coordsListDiv.value = coordsList;
+
+            drawRectPoints(currentPoint);
+
+			captureTimeout = setTimeout(function(){
+				if(featureDetect){
+					sendDataToServer(currentPoint);
+				} 
+			}, 500);
+
+			captureTimeout = setTimeout(function(){
+				if(featureDetect){
+					sendDataToServer(currentPoint);
+				} 
+			}, 750);
+        }, 2000 );
+
+//        captureTimeout = setInterval(function(){
+//            if(featureDetect){
+//               sendDataToServer(currentPoint);
+//            }
+//        }, 1000/captureRate);
+    }
+
+    function averagePoints(tempCoordsList){
+        var xTotal = 0.0
+        var yTotal = 0.0
+        for(var i=0; i< tempCoordsList.length; i++){
+            [tempX, tempY] = tempCoordsList[i].split(',')
+            xTotal += parseFloat(tempX.trim())
+            yTotal += parseFloat(tempY.trim())
+        }
+        var xMean = xTotal / tempCoordsList.length
+        var yMean = yTotal / tempCoordsList.length
+        return xMean + ", " + yMean
+
+    }
+
+    function drawRectPoints(currentPoint){
+        // currentPoint = 0-4, 0 = middle of screen,
+        // 1 = top right and go clockwise from there
+        var x = null;
+        var y = null;
+
+        switch(parseInt(currentPoint)){
+            case 0: x=0;
+                    y=0;
+                    break;
+            case 1: x=1;
+                    y=-1;
+                    break;
+            case 2: x=-1;
+                    y=-1;
+                    break;
+            case 3: x=-1;
+                    y=1;
+                    break;  
+            case 4: x=1;
+                    y=1;
+                    break;
+ 
+       }
+        circleContext.clearRect(0,0,circleContext.canvas.width, circleContext.canvas.height);
+        circleContext.beginPath();
+        circleContext.arc(xstart+(x*xoffset),(y*r)+ystart,ptSize,0,2*Math.PI);
+		circleContext.fill();
+		
     }
 
     function drawCircle(currentPercent){
@@ -225,6 +330,33 @@ window.onload = function() {
 		circleContext.fill();
 		
     }
+
+	function download(){
+		saveContext.clearRect(0,0,saveCanvas.width, saveCanvas.height);
+	    saveContext.drawImage(saveVideo,0,0,saveCanvas.width,saveCanvas.height);
+	    var dataURL = saveCanvas.toDataURL('image/jpeg');
+	    this.href = dataURL;
+	    saveContext.drawImage(canvas,0,0,saveCanvas.width,saveCanvas.height);
+
+	    saveData(coordsList, "coords.json");       
+
+	}
+
+	var saveData = (function () {
+		var a = document.createElement("a");
+		document.body.appendChild(a);
+		a.style = "display: none";
+	
+		return function (data, fileName) {
+	    	var json = JSON.stringify(data),
+	        blob = new Blob([json], {type: "octet/stream"}),
+	        url = window.URL.createObjectURL(blob);
+	    	a.href = url;
+	    	a.download = fileName;
+	    	a.click();
+	    	window.URL.revokeObjectURL(url);
+		};
+	}());
 
 	// var gui = new dat.GUI();
 	// gui.add(tracker, 'edgesDensity', 0.1, 0.5).step(0.01).listen();

@@ -38,7 +38,7 @@ def setUp(subfolderPath):
 
 	faceGridParams = createFaceGridFromFaceBox(wholeFace,faceBox,faceGridPoints)
 
-	f = open(savePath + '/face/faceGridData.txt','w')
+	f = open(savePath + '/face/faceGridData.json','w')
 	json.dump(faceGridParams.tolist(),f)
 
 	

@@ -52,12 +52,12 @@ class capture:
         file.close() 
        
         featuresJson = json.dumps(web.input().faceFeatures)
-        if(featuresJson is None):
-            file = open('./myData/rawData/' + subfolderPath + '/faceFeatures.json','w+')
-            file.write(web.input().faceFeatures)
-            file.close()
-        else:
-            print('Features are not a valid JSON.')
+#        if(featuresJson is not None):
+#            file = open('./myData/rawData/' + subfolderPath + '/faceFeatures.json','w+')
+#            file.write(web.input().faceFeatures)
+#            file.close()
+#        else:
+#            print('Features are not a valid JSON.')
 		
         setup = myInputSetUp.setUp(subfolderPath)
         output = runModel.run(subfolderPath)
