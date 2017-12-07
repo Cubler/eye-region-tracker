@@ -6,12 +6,12 @@ $def with (page)
   <title>Face Capture</title>
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="./static/tracking.js/tracking.js/build/tracking.js"></script>
-  <script src="./static/tracking.js/tracking.js/build/data/face-min.js"></script>
-  <script src="./static/tracking.js/tracking.js/build/data/face.js"></script>
-  <script src="./static/tracking.js/tracking.js/build/data/eye.js"></script>
-  <script src="./static/tracking.js/tracking.js/src/alignment/training/Landmarks.js"></script>
-  <script src="./static/tracking.js/tracking.js/src/alignment/training/Regressor.js"></script>
+  <script src="./static/tracking.js/build/tracking.js"></script>
+  <script src="./static/tracking.js/build/data/face-min.js"></script>
+  <script src="./static/tracking.js/build/data/face.js"></script>
+  <script src="./static/tracking.js/build/data/eye.js"></script>
+  <script src="./static/tracking.js/src/alignment/training/Landmarks.js"></script>
+  <script src="./static/tracking.js/src/alignment/training/Regressor.js"></script>
 
   <script src="./static/faceCapture.js" type="text/javascript"></script>
     <link rel='stylesheet' href='./static/style.css'>
@@ -24,17 +24,32 @@ $def with (page)
       <canvas id="canvas" width="320" height="240"></canvas>
   </div>
 
+  <div id="instructions"><p>
+   <b>Instructions:</b> <br>
+<b>1)</b> This task is to track the black dot as it goes around the screen. It must be done on a laptop or monitor with a webcam.<br>
+<b>2)</b> Maximize your browser window so the black box stretches across your whole monitor. <br>
+<b>3)</b> Make sure your face is entirely within the picture.<br>
+<b>4)</b> Adjust lighting and positioning in order for your face to be detected.  <br>
+<b>4a)</b> (When it’s detected, dots and blocks will appear on your face. The start button will become activated when your face is being detected.)<br>
+<b>5)</b> When ready, press the start button and your screen will center on the first black dot. It will take a few seconds to start moving. Once it does, follow the dot as naturally as possible. <br>
+<b>6)</b> After three revolutions the tracking will stop and it will take a few more seconds to send the data that was collected. Please be patient.<br>
+<b>7)</b> The second popup will tell you that the data is sent and it is safe to close the window.<br>
+<b>8)</b> Thank You!
+  <p>
+  </div>
+
   </div class = "save-frame">
     <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
     <canvas id="save" width="640" height="426"></canvas>
   </div>
+  
   <input type="number" id="positionChoice" min="0" max="4">
-  <button id="getPos">Get Position</button>
-  <button id="trackCircle">Track Circle</button>
-  <button id="cancelTrack">Cancel Track</button>
+  <button id="getPos" disabled>Get Position</button>
+  <button id="trackButton" onclick= "window.location.href='#circleCanvas'">Start</button>
+  <button id="cancelTrack" >Cancel Track</button>
 
   <div class="circleTrack">
-    <canvas id="circleCanvas" width="1400" height="1000"></canvas>
+    <canvas id="circleCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
     
 <br>
 <textarea id="coords" rows="4" cols="50">
@@ -43,7 +58,7 @@ $def with (page)
 <textarea id="coordsList" rows="4" cols="50">
 "Original Text"
 </textarea>
-  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a>
+<!--  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a> -->
 
 
 $:page

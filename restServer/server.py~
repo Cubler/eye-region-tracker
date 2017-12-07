@@ -16,7 +16,8 @@ import shutil
 urls = (
     '/', 'index',
     '/capture', 'capture',
-    '/model', 'model'
+    '/model', 'model',
+    '/save', 'save'
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -38,9 +39,10 @@ class capture:
         print(img[23:50])
         encode = img[23:len(img)].decode('base64')
 
-        global fileNumber
-        subfolderPath = str(fileNumber)
-        fileNumber = fileNumber + 1 
+#        global fileNumber
+#        subfolderPath = str(fileNumber)
+#        fileNumber = fileNumber + 1 
+        subfolderPath = "1"
         checkForDir('./myData/rawData/' + subfolderPath)
 
         fp = open('./myData/rawData/' + subfolderPath + '/wholeFace.jpg','wb')
@@ -63,8 +65,8 @@ class capture:
         output = runModel.run(subfolderPath)
 		
 		# Delete data subfolder
-       #shutil.rmtree('./myData/rawData/'+subfolderPath)
-        #shutil.rmtree('./myData/' + subfolderPath)
+        shutil.rmtree('./myData/rawData/'+subfolderPath)
+        shutil.rmtree('./myData/' + subfolderPath)
         return output
 
 class model:
@@ -76,12 +78,36 @@ class model:
         #image = open('./myData/face/0.jpg','rb').read()
         return output
 
+class save:
+    def GET(self):
+        savePath = './myData/saveData/'
+        saveSubPath = "0"
+        img = web.input().imgBase64
+        encode = img[23:len(img)].decode('base64')
+        
+#        checkForDir(savePath + str(saveSubPath))
+    
+        while checkForDir(savePath + str(saveSubPath)):
+            saveSubPath = saveSubPath + 1
+		
+        fp = open(savePath + saveSubPath + '/wholeFace.jpg', 'wb')
+        fp.write(encode)
+        fp.close 
+
+        file = open(savePath + saveSubPath + 'coordsList.json','w+')
+        file.write(web.input().coordsData)
+        file.close()
+
 def checkForDir(path):
     if(not os.path.exists(path)):
         try:
             os.makedirs(path)
+            return False
         except Exception as e:
             print(e.message)
+            return False
+    else:
+        return True
 
 if __name__ == "__main__":
     app = web.application(urls, globals())
