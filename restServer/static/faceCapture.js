@@ -17,7 +17,6 @@ window.onload = function() {
     saveVideo.width = saveWidth
     saveVideo.height = saveHeight
 
-
     var videoWRatio = saveVideo.clientWidth/video.clientWidth;
 	var videoHRatio = saveVideo.clientHeight/video.clientHeight;
 
@@ -35,6 +34,7 @@ window.onload = function() {
 	var eyeBoxSide = 0;
 	var faceBoxSide = 0;
 	var faceArray;
+	var saveSubPath;
 
     var fps = 1/2;
     var revolDuration = 5; // seconds
@@ -52,27 +52,28 @@ window.onload = function() {
 	var featureDetect = false; 
 	var revCounter = 0;
     var isTracking = false;    
-
+	var isCanceled = false;
+	var isCollecting = false;
     var circleCanvas = document.getElementById("circleCanvas");
     var circleContext = circleCanvas.getContext("2d");
     
-    var offset = 50;
-    var r = 350;
-    var xoffset = window.innerWidth/2-offset;
-    var xstart = window.innerWidth/2;
-    var ystart = r+offset;
+    var offset;
+    var r;
+    var xoffset;
+    var xstart;
+
+    var ystart;
     var ptSize = 5;
 
-	circleContext.canvas.height = 2*r+2*offset;
 	window.addEventListener('resize', resizeCanvas, false);
 	resizeCanvas();
 
-	drawRectPoints(0);
     trackButton.disabled = true;
 	
 	document.getElementById('getPos').addEventListener("click", capture);
+	document.getElementById('getPos').disabled = true;
 	document.getElementById('trackButton').addEventListener("click", animateRectPoints);
-    document.getElementById('cancelTrack').addEventListener("click", cancelTrack);
+    document.getElementById('cancelTrack').addEventListener("click", cancelButtonMethod);
 
 	var tracker = new tracking.LandmarksTracker();
 	tracker.setInitialScale(4);
@@ -100,7 +101,7 @@ window.onload = function() {
 					return;
 				}
 				featureDetect = true;
-                if(!isTracking){
+                if(!isTracking && !isCollecting){
                     trackButton.disabled = false;
 	    			thresholdFeatureDetect();
                 }	
@@ -182,7 +183,9 @@ window.onload = function() {
         if(!featureDetect){
             return;
         }    	
-        saveContext.clearRect(0,0,saveCanvas.width, saveCanvas.height);
+		isCollecting = true
+		timeOutSendTrackData()
+		saveContext.clearRect(0,0,saveCanvas.width, saveCanvas.height);
 	    saveContext.drawImage(saveVideo,0,0,saveCanvas.width,saveCanvas.height);
     	var dataURL = saveCanvas.toDataURL('image/jpeg');
 
@@ -207,11 +210,12 @@ window.onload = function() {
 
     	$.ajax({
     		type: "GET",
-    		//url: "https://comp158.cs.unc.edu:8080/capture",
-            url: "https://localhost:3000/capture",
+    		url: "https://comp158.cs.unc.edu:8080/capture",
+            //url: "https://localhost:3000/capture",
     		data: {
     			imgBase64: dataURL,
     			faceFeatures: features,
+				saveSubPath: saveSubPath,
     		}, 
 			success: function(coords){
                     console.log(coords);
@@ -228,19 +232,23 @@ window.onload = function() {
     }
 
     function capture(){
+		isCanceled = true;
 		drawRectPoints(positionChoice.value);
 		setTimeout(function(){
 	        sendDataToServer(positionChoice.value);
 		}, 500);
     }
-
-    function cancelTrack(){
-        clearTimeout(captureTimeout);
+	
+	function cancelButtonMethod(){
+        isCanceled = true;
+		cancelTrack();
+	}		
+    
+	function cancelTrack(){
+        isTracking = false;
+		clearTimeout(captureTimeout);
         clearTimeout(animationTimeout);
         coordsListDiv.value = coordsList;
-		trackButton.disabled = false;
-        isTracking = false;
-
     }
 
     function animateCircle(){
@@ -258,18 +266,17 @@ window.onload = function() {
     }
 
     function animateRectPoints(){
-		xoffset = window.innerWidth/2-offset;
-    	xstart = window.innerWidth/2;
-        
-		circleContext.canvas.width = window.innerWidth; 
-	    circleContext.canvas.height = 2*r+2*offset;
-
-        isTracking = true;
         trackButton.disabled = true;
+		cancelTrack();
+        isTracking = true;
+		resizeCanvas()
+	    circleContext.canvas.height = 2*r+2*offset;
+		isCanceled = false;
 		var currentPoint = -1;
 		revCounter = 0;        
         coordsList = [];
 		drawRectPoints(0);
+		console.log("Starting...")
 		
 		animationTimeout = setInterval(function(){
             previousPoint = currentPoint % 5
@@ -280,19 +287,11 @@ window.onload = function() {
 
 			if(revCounter > (3*5)){
 				cancelTrack();
-				alert('Please wait for data to send. This may take a moment. Another window like this will pop up when the data is sent. Thank you for your patience.')
+				alert('Please wait for data to send. This may take up to a minute or so. Another popup like this will appear when the data is sent. Please close this popup and you may minimize this tab, just do not close it. Thank you for your patience.')
                 return;
 			}
 			transitionRecPoint(previousPoint, currentPoint)			
-//            setTimeout(function(){
-//				drawRectPoints(currentPoint);
-//			}, 1100);
-
-			captureTimeout = setTimeout(function(){
-				if(featureDetect){
-					sendDataToServer(currentPoint);
-				} 
-			}, 1750);
+			timeOutSendTrackData()			
 
 			captureTimeout = setTimeout(function(){
 				if(featureDetect){
@@ -305,6 +304,12 @@ window.onload = function() {
 					sendDataToServer(currentPoint);
 				} 
 			}, 2250);
+
+			captureTimeout = setTimeout(function(){
+				if(featureDetect){
+					sendDataToServer(currentPoint);
+				} 
+			}, 2500);
         }, 3000 );
 
     }
@@ -357,9 +362,14 @@ window.onload = function() {
 	}
 
     function resizeCanvas(){
-		xoffset = window.innerWidth/2-offset;
-   		xstart = window.innerWidth/2;
-		circleContext.canvas.width = window.innerWidth;
+		offset = window.innerWidth * 0.02;
+		xoffset = (window.innerWidth-50)/2-offset;
+   		xstart = (window.innerWidth-50)/2;
+	    r = window.innerHeight*0.4;
+		ystart = r + offset;
+
+		circleContext.canvas.width = window.innerWidth-50;
+		circleContext.canvas.height = 2*r+2*offset;
 		drawRectPoints(0);
 	}
 
@@ -403,31 +413,36 @@ window.onload = function() {
     }
 
 	function sendTrackDataToServer(){
-	    var dataURL = saveCanvas.toDataURL('image/jpeg');
-		coordsData = JSON.stringify(coordsList)
+		isCollecting = false;
+	    if(!isCanceled && !isTracking){
+			var dataURL = saveCanvas.toDataURL('image/jpeg');
+			coordsData = JSON.stringify(coordsList)
 
-    	$.ajax({
-    		type: "GET",
-    		//url: "https://comp158.cs.unc.edu:8080/capture",
-            url: "https://localhost:3000/save",
-    		data: {
-    			imgBase64: dataURL,
-    			coordsData: coordsData,
-    		}, 
-			success: function(){
-                    // Thank You
-					alert('Your results have been sent and it safe to close this window. Thank you for your time.')
-        	}, error: function(exception){
-    			console.log("Capture Exception: " + exception);
-    		}
-    	});
-
+	    	$.ajax({
+    			type: "GET",
+    			url: "https://comp158.cs.unc.edu:8080/save",
+            	//url: "https://localhost:3000/save",
+	    		data: {
+	    			imgBase64: dataURL,
+	    			coordsData: coordsData,
+	    		}, 
+				success: function(){
+	                    // Thank You
+						isCollecting = false;
+						alert('Your results have been sent and it safe to close this window. Thank you for your time.')
+	        	}, error: function(exception){
+					isCollecting = false;
+	    			console.log("Capture Exception: " + exception);
+					alert('There has been an error sending your data. Please try again or email cubler@cs.unc.edu with the time it was when you did the trail. Thank You.')
+	    		}
+	    	});
+		}
 	}
 	
 	function thresholdFeatureDetect(){
 		clearTimeout(featureDetectTimeout)
 		featureDetectTimeout = setTimeout(function(){
-            trackButton.disabled = true;
+       	    trackButton.disabled = true;
 		}, 300);
 	}
 	 
@@ -435,7 +450,8 @@ window.onload = function() {
 		clearTimeout(sendTrackDataTimeout)
 		sendTrackDataTimeout = setTimeout(function(){
 			sendTrackDataToServer();
-		}, 3000);
+
+		}, 5000);
 	}
 
 	function download(){

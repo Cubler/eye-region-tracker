@@ -17,7 +17,8 @@ urls = (
     '/', 'index',
     '/capture', 'capture',
     '/model', 'model',
-    '/save', 'save'
+    '/save', 'save',
+	'/start', 'start'
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -27,22 +28,35 @@ render = web.template.render('templetes/',)
 
 app = web.application(urls, globals())
 fileNumber = 0;
+savePath = './myData/saveData/'
+
 
 class index:
     def GET(self):
         return render.index(self)
 
+class start:
+	def GET(self):
+		global savePath
+		ip = web.ctx['ip']
+		subPath = 0;
+		while checkForDir(savePath + ip + '/' + str(subPath)):
+			subPath += 1
+		
+		return subPath
+
 class capture:
     def GET(self):
-
+		global savePath
+		rawPath = './myData/rawData/'
         img = web.input().imgBase64
-        print(img[23:50])
         encode = img[23:len(img)].decode('base64')
-
-#        global fileNumber
-#        subfolderPath = str(fileNumber)
-#        fileNumber = fileNumber + 1 
-        subfolderPath = "1"
+		
+		rawSubPath = 0
+        while checkForDir(rawPath + rawSubPath):
+			rawSubPath += 1
+        
+		subfolderPath = str(rawSubPath)
         checkForDir('./myData/rawData/' + subfolderPath)
 
         fp = open('./myData/rawData/' + subfolderPath + '/wholeFace.jpg','wb')
@@ -53,17 +67,15 @@ class capture:
         file.write(web.input().faceFeatures)
         file.close() 
        
-        featuresJson = json.dumps(web.input().faceFeatures)
-#        if(featuresJson is not None):
-#            file = open('./myData/rawData/' + subfolderPath + '/faceFeatures.json','w+')
-#            file.write(web.input().faceFeatures)
-#            file.close()
-#        else:
-#            print('Features are not a valid JSON.')
-		
         setup = myInputSetUp.setUp(subfolderPath)
         output = runModel.run(subfolderPath)
+
+		saveSubPath = int(web.input().saveSubPath)
+		file = open(savePath + web.ctx['ip'] +'/' + str(saveSubPath) + '/coordsList.txt','w+')
+        file.write(output)
+        file.close()
 		
+				
 		# Delete data subfolder
         shutil.rmtree('./myData/rawData/'+subfolderPath)
         shutil.rmtree('./myData/' + subfolderPath)
@@ -81,7 +93,7 @@ class model:
 class save:
     def GET(self):
         savePath = './myData/saveData/'
-        saveSubPath = "0"
+        saveSubPath = 0
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
         
@@ -90,11 +102,11 @@ class save:
         while checkForDir(savePath + str(saveSubPath)):
             saveSubPath = saveSubPath + 1
 		
-        fp = open(savePath + saveSubPath + '/wholeFace.jpg', 'wb')
+        fp = open(savePath + str(saveSubPath) + '/wholeFace.jpg', 'wb')
         fp.write(encode)
         fp.close 
 
-        file = open(savePath + saveSubPath + '/coordsList.json','w+')
+        file = open(savePath + str(saveSubPath) + '/coordsList.json','w+')
         file.write(web.input().coordsData)
         file.close()
 

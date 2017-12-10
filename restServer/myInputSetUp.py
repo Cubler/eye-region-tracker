@@ -46,7 +46,15 @@ def setUp(subfolderPath):
 # formated as x,y,w,h where x,y is top left corner of box
 def cropWithParams(image,box):
 	[x,y,w,h]=box;
-	return image[y:(y+h),x:(x+w),:]
+	if y+h >= image.shape[0]:
+		yend = image.shape[0]-1
+	else:
+		yend = y+h
+	if x+w >= image.shape[1]:
+		xend = image.shape[1]-1
+	else:
+		xend = x+w
+	return image[y:yend,x:xend,:]
 	
 def checkForDir(path):
 	if not os.path.exists(path):
