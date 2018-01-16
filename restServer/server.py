@@ -51,7 +51,7 @@ class capture:
         encode = img[23:len(img)].decode('base64')
 
         rawSubPath = 0
-        while checkForDir(rawPath + rawSubPath):
+        while checkForDir(rawPath + str(rawSubPath)):
             rawSubPath += 1
   
         subfolderPath = str(rawSubPath)
