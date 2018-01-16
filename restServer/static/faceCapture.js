@@ -11,6 +11,7 @@ window.onload = function() {
     var saveWidth = 800
     var saveHeight = 600
     var eps = 0.00001;
+    var serverurl = "https://localhost:3000"
     
     saveCanvas.width = saveWidth
     saveCanvas.height = saveHeight
@@ -209,7 +210,7 @@ window.onload = function() {
 
     	$.ajax({
     		type: "GET",
-    		url: "https://comp158.cs.unc.edu:8080/capture",
+    		url: serverurl+"/capture",
     		data: {
     			imgBase64: dataURL,
     			faceFeatures: features,
@@ -311,7 +312,7 @@ window.onload = function() {
 	
     	$.ajax({
     		type: "GET",
-    		url: "https://comp158.cs.unc.edu:8080/start",
+    		url: serverurl+"/start",
     		data: {
     		}, 
 			success: function(subPath){
@@ -414,7 +415,7 @@ window.onload = function() {
 
 	    	$.ajax({
     			type: "GET",
-    			url: "https://comp158.cs.unc.edu:8080/save",
+    			url: serverurl+"/save",
             	//url: "https://localhost:3000/save",
 	    		data: {
 	    			imgBase64: dataURL,

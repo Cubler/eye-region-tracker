@@ -18,7 +18,7 @@ urls = (
     '/capture', 'capture',
     '/model', 'model',
     '/save', 'save',
-	'/start', 'start'
+    '/start', 'start'
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -37,24 +37,23 @@ class index:
 
 class start:
     def GET(self):
-        global savePath
         ip = web.ctx['ip']
         subPath = 0;
         while checkForDir(savePath + ip + '/' + str(subPath)):
-            subPath += 1
+             subPath += 1
+
         return subPath
 
 class capture:
     def GET(self):
-        global savePath
         rawPath = './myData/rawData/'
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
-		
+
         rawSubPath = 0
-        while checkForDir(rawPath + str(rawSubPath)):
+        while checkForDir(rawPath + rawSubPath):
             rawSubPath += 1
-        
+  
         subfolderPath = str(rawSubPath)
         checkForDir('./myData/rawData/' + subfolderPath)
 

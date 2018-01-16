@@ -1,7 +1,7 @@
 import os
 import sys
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
-sys.path.append(os.path.abspath("/playpen/cubler/caffe/python"))
+sys.path.append(os.path.abspath("/home/cubler/caffe/python"))
 #print(sys.path)
 os.environ['GLOG_minloglevel']='2'
 import caffe
