@@ -36,27 +36,26 @@ class index:
         return render.index(self)
 
 class start:
-	def GET(self):
-		global savePath
-		ip = web.ctx['ip']
-		subPath = 0;
-		while checkForDir(savePath + ip + '/' + str(subPath)):
-			subPath += 1
-		
-		return subPath
+    def GET(self):
+        global savePath
+        ip = web.ctx['ip']
+        subPath = 0;
+        while checkForDir(savePath + ip + '/' + str(subPath)):
+            subPath += 1
+        return subPath
 
 class capture:
     def GET(self):
-		global savePath
-		rawPath = './myData/rawData/'
+        global savePath
+        rawPath = './myData/rawData/'
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
 		
-		rawSubPath = 0
-        while checkForDir(rawPath + rawSubPath):
-			rawSubPath += 1
+        rawSubPath = 0
+        while checkForDir(rawPath + str(rawSubPath)):
+            rawSubPath += 1
         
-		subfolderPath = str(rawSubPath)
+        subfolderPath = str(rawSubPath)
         checkForDir('./myData/rawData/' + subfolderPath)
 
         fp = open('./myData/rawData/' + subfolderPath + '/wholeFace.jpg','wb')
@@ -70,12 +69,16 @@ class capture:
         setup = myInputSetUp.setUp(subfolderPath)
         output = runModel.run(subfolderPath)
 
-		saveSubPath = int(web.input().saveSubPath)
-		file = open(savePath + web.ctx['ip'] +'/' + str(saveSubPath) + '/coordsList.txt','w+')
-        file.write(output)
+        saveSubPath = int(web.input().saveSubPath)
+        currentPosition = int(web.input().currentPosition)
+        file = open(savePath + web.ctx['ip'] +'/' + str(saveSubPath) + '/coordsList.txt','a+')
+        file.write(str(currentPosition)+ ', ' + output+'\n')
         file.close()
 		
-				
+        fp = open(savePath + web.ctx['ip'] + '/' + str(saveSubPath) + '/wholeFace.jpg','wb')
+        fp.write(encode)
+        fp.close()
+
 		# Delete data subfolder
         shutil.rmtree('./myData/rawData/'+subfolderPath)
         shutil.rmtree('./myData/' + subfolderPath)
