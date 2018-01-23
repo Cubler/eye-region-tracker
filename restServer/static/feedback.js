@@ -75,7 +75,7 @@ window.onload = function() {
 	
 	document.getElementById('getPos').addEventListener("click", capture);
 	document.getElementById('getPos').disabled = disableGetPos;
-	document.getElementById('trackButton').addEventListener("click", animateRectPoints);
+	document.getElementById('trackButton').addEventListener("click", startSimonSays);
     document.getElementById('cancelTrack').addEventListener("click", cancelButtonMethod);
     document.getElementById('getCenter').addEventListener("click", getCenter);
     
@@ -221,9 +221,10 @@ window.onload = function() {
 				currentPosition: currentPosition,
     		}, 
 			success: function(coords){
+                    var d = new Date();
                     console.log(coords);
         			coordsDiv.value = coords;
-                    coordsList.push(currentPosition + " " + coords +'\n'); 
+                    coordsList.push(currentPosition + " " + coords + ' ' + d.getTime() + '\n'); 
                     coordsListDiv.value = coordsList;
                     if(centering){
                         centerList.push(parseCoords(coords))                            
@@ -315,6 +316,16 @@ window.onload = function() {
         }, 3000 );
 
     }
+
+    function startSimonSays(){
+        trackButton.disabled = true;
+		cancelTrack();
+        isTracking = true;
+		resizeCanvas()
+
+        var sequence = []
+    }
+
 
     function getCenter(){
         
@@ -485,24 +496,37 @@ window.onload = function() {
         var quadrant = coordToQuadrant(coord)
 		var x = null;
 		var y = null;
+        var color = "#FFFFFF"
+        var audio = "default"
 		switch(parseInt(quadrant)){
             case 1: x=0;
                     y=-1;
+                    color = "#FF0000"
+                    audio = "audio1"
                     break;
             case 2: x=-1;
                     y=-1;
+                    color = "#00FF00"
+                    audio = "audio2"
                     break;
             case 3: x=-1;
                     y=0;
+                    color = "#0000FF"
+                    audio = "audio3"
                     break;  
             case 4: x=0;
                     y=0;
+                    color = "#FFFF00"
+                    audio = "audio4"
                     break; 
     	}
+        var sound = document.getElementById(audio);
         console.log("Quadrant: " + quadrant)
         circleContext.clearRect(0,0,circleContext.canvas.width, circleContext.canvas.height);
         circleContext.beginPath();
+        circleContext.fillStyle = color;
         circleContext.fillRect(xstart+(x*xoffset),(y*r)+ystart,circleContext.canvas.width/2, circleContext.canvas.height/2);
+        sound.play();
 		
     }
     

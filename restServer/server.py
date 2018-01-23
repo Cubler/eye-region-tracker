@@ -11,7 +11,7 @@ from urlparse import urlparse, parse_qs
 from requests_toolbelt.multipart import decoder
 import os
 import shutil
-
+import time
 
 urls = (
     '/', 'index',
@@ -56,6 +56,8 @@ class start:
 
 class capture:
     def GET(self):
+
+        s= time.time()
         rawPath = './myData/rawData/'
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
@@ -87,6 +89,8 @@ class capture:
         fp = open(savePath + web.ctx['ip'] + '/' + str(saveSubPath) + '/wholeFace.jpg','wb')
         fp.write(encode)
         fp.close()
+        
+        print("Duration: %.3f" % (time.time() - s))
 
 		# Delete data subfolder
         shutil.rmtree('./myData/rawData/'+subfolderPath)
