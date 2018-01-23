@@ -18,7 +18,9 @@ urls = (
     '/capture', 'capture',
     '/model', 'model',
     '/save', 'save',
-    '/start', 'start'
+    '/start', 'start',
+    '/dataCollection', 'dataCollection',
+    '/feedback', 'feedback'
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -34,6 +36,14 @@ savePath = './myData/saveData/'
 class index:
     def GET(self):
         return render.index(self)
+
+class dataCollection:
+    def GET(self):
+        return render.dataCollection(self)
+
+class feedback:
+    def GET(self):
+        return render.feedback(self)
 
 class start:
     def GET(self):
