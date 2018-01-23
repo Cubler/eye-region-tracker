@@ -34,11 +34,11 @@ $def with (page)
     <canvas id="save" width="640" height="426"></canvas>
   </div>
   
-  <input type="number" id="positionChoice" min="0" max="4">
+  <input type="number" id="positionChoice" min="0" max="4" value="0">
   <button id="getCenter">Get Center"</button> 
   <button id="getPos" >Get Position</button>
-  <button id="trackButton" onclick= "window.location.href='#circleCanvas'">Start Tracking</button>
-  <button id="cancelTrack" >Cancel Track</button>
+  <button id="trackButton" onclick= "window.location.href='#circleCanvas'">Start Simon Says</button>
+  <button id="cancelTrack" >Cancel Simon Says</button>
 
   <div class="circleTrack">
     <canvas id="circleCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
@@ -50,6 +50,13 @@ $def with (page)
 <textarea id="coordsList" rows="4" cols="50">
 "Original Text"
 </textarea>
+<audio id="audio1" src="https://www.soundjay.com/button/beep-07.mp3" autostart = "false"></audio>
+<audio id="audio2" src="https://www.soundjay.com/button/beep-06.mp3" autostart = "false"></audio>
+<audio id="audio3" src="https://www.soundjay.com/button/beep-08b.mp3" autostart = "false"></audio>
+<audio id="audio4" src="https://www.soundjay.com/phone/cell-phone-1-nr7.mp3" autostart = "false"></audio>
+<audio id="default" src="https://www.soundjay.com/button/beep-22.mp3" autostart = "false"></audio>
+
+
 <!--  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a> -->
 
 

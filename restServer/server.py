@@ -13,10 +13,12 @@ from requests_toolbelt.multipart import decoder
 import os
 import io
 import shutil
+import time
 import base64
 from PIL import Image
 import re
 import numpy as np 
+
 urls = (
     '/', 'index',
     '/capture', 'capture',
@@ -61,7 +63,6 @@ class start:
 
 class capture:
     def GET(self):
-    
         startCaptureTime = time.time()
         rawPath = './myData/rawData/'
         img = web.input().imgBase64
@@ -94,6 +95,8 @@ class capture:
         fp = open(savePath + web.ctx['ip'] + '/' + str(saveSubPath) + '/wholeFace.jpg','wb')
         fp.write(encode)
         fp.close()
+        
+        print("Duration: %.3f" % (time.time() - startCaptureTime))
 
 		# Delete data subfolder
         shutil.rmtree('./myData/rawData/'+subfolderPath)
