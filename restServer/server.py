@@ -6,13 +6,17 @@ import runModel
 import myInputSetUp
 from web.wsgiserver import CherryPyWSGIServer
 import os
+import time
 import json
 from urlparse import urlparse, parse_qs
 from requests_toolbelt.multipart import decoder
 import os
+import io
 import shutil
-
-
+import base64
+from PIL import Image
+import re
+import numpy as np 
 urls = (
     '/', 'index',
     '/capture', 'capture',
@@ -20,7 +24,8 @@ urls = (
     '/save', 'save',
     '/start', 'start',
     '/dataCollection', 'dataCollection',
-    '/feedback', 'feedback'
+    '/feedback', 'feedback',
+    '/getCoordsFast', 'getCoordsFast',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -56,6 +61,8 @@ class start:
 
 class capture:
     def GET(self):
+    
+        startCaptureTime = time.time()
         rawPath = './myData/rawData/'
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
@@ -91,7 +98,27 @@ class capture:
 		# Delete data subfolder
         shutil.rmtree('./myData/rawData/'+subfolderPath)
         shutil.rmtree('./myData/' + subfolderPath)
+        print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
+
+
+class getCoordsFast:
+    def GET(self):
+    
+        startCaptureTime = time.time()
+        url = web.input().imgBase64
+        imgstr = re.search(r'base64,(.*)',url).group(1)
+        imageBytes = io.BytesIO(base64.b64decode(imgstr))
+        image = Image.open(imageBytes)
+        imageArray = np.array(image)[:,:,:]
+
+        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
+
+		# Delete data subfolder
+        print("Total Fast Capture Time: %.2f" % (time.time() - startCaptureTime))
+        return output
+
 
 class model:
     def GET(self):
