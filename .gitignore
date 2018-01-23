@@ -1,3 +1,2 @@
 **/myData
-**/runModel.pyc
-**/server.pyc
+*.pyc

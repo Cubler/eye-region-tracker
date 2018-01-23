@@ -12,6 +12,7 @@ maxsize = (224,224)
 
 def setUp(subfolderPath):
 	# for numOfPics: since we are ignoring photo (0) we get +1 num of photos we are going to prcess and therefore this works for range(start,<) 
+
 	home = os.path.expanduser("~")
 	dir_path = os.path.dirname(os.path.realpath(__file__))
 	dataPath = "./myData/rawData" + '/' + subfolderPath
@@ -41,20 +42,36 @@ def setUp(subfolderPath):
 	f = open(savePath + '/face/faceGridData.json','w')
 	json.dump(faceGridParams.tolist(),f)
 
-	
+def setUpNoSave(wholeFace, featureString):
+	# for numOfPics: since we are ignoring photo (0) we get +1 num of photos we are going to prcess and therefore this works for range(start,<) 
+    features = json.loads(featureString)
+    leftEyeBox = np.round(features['leftEye']).astype(int)
+    rightEyeBox = np.round(features['rightEye']).astype(int)
+    faceBox = np.round(features['face']).astype(int)
+    faceGridPoints = features['faceGridPoints']
+
+    print(wholeFace.shape)
+	# Crop Whole Image and save
+    
+    leftEyePic = cropWithParams(wholeFace,leftEyeBox)
+    rightEyePic = cropWithParams(wholeFace,rightEyeBox)
+    wholeFacePic = cropWithParams(wholeFace,faceBox)
+    faceGridParams = createFaceGridFromFaceBox(wholeFace,faceBox,faceGridPoints)
+
+    return leftEyePic, rightEyePic, wholeFacePic, faceGridParams.tolist()
 
 # formated as x,y,w,h where x,y is top left corner of box
 def cropWithParams(image,box):
-	[x,y,w,h]=box;
-	if y+h >= image.shape[0]:
-		yend = image.shape[0]-1
-	else:
-		yend = y+h
-	if x+w >= image.shape[1]:
-		xend = image.shape[1]-1
-	else:
-		xend = x+w
-	return image[y:yend,x:xend,:]
+    [x,y,w,h]=box;
+    if y+h >= image.shape[0]:
+        yend = image.shape[0]-1
+    else:
+        yend = y+h
+    if x+w >= image.shape[1]:
+        xend = image.shape[1]-1
+    else:
+        xend = x+w
+    return image[y:yend,x:xend,:]
 	
 def checkForDir(path):
 	if not os.path.exists(path):

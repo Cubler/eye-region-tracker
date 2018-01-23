@@ -213,7 +213,7 @@ window.onload = function() {
 
     	$.ajax({
     		type: "GET",
-    		url: serverurl+"/capture",
+    		url: serverurl+"/getCoordsFast",
     		data: {
     			imgBase64: dataURL,
     			faceFeatures: features,
