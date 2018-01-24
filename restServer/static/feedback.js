@@ -55,10 +55,12 @@ window.onload = function() {
 	var revCounter = 0;
     var isTracking = false;    
 	var isCanceled = false;
+    var isProcessing = false;
 	var isCollecting = false;
     var circleCanvas = document.getElementById("circleCanvas");
     var circleContext = circleCanvas.getContext("2d");
-    
+       
+
     var disableGetPos = false
     var offset;
     var r;
@@ -68,14 +70,18 @@ window.onload = function() {
     var ystart;
     var ptSize = 5;
 
+    var sequence = []
+    var userSequence = []
+
 	window.addEventListener('resize', resizeCanvas, false);
 	resizeCanvas();
 
-    trackButton.disabled = true;
+    trackButton.disabled = false;
 	
 	document.getElementById('getPos').addEventListener("click", capture);
 	document.getElementById('getPos').disabled = disableGetPos;
 	document.getElementById('trackButton').addEventListener("click", startSimonSays);
+	document.getElementById('getUserSequence').addEventListener("click", getUserSequence);
     document.getElementById('cancelTrack').addEventListener("click", cancelButtonMethod);
     document.getElementById('getCenter').addEventListener("click", getCenter);
     
@@ -107,8 +113,8 @@ window.onload = function() {
 				}
 				featureDetect = true;
                 if(!isTracking){
-                    trackButton.disabled = false;
-	    			thresholdFeatureDetect();
+//                    trackButton.disabled = false;
+//	    			thresholdFeatureDetect();
                 }	
 			
 	            [lxc,lyc,lw,lh] = targetBoxParams(leftArray,'eye');
@@ -185,6 +191,9 @@ window.onload = function() {
 	  }
 
     function sendDataToServer(currentPosition, centering = false){
+        var d = new Date();
+        var startTime = d.getTime()
+
         if(!featureDetect){
             return;
         }    	
@@ -211,6 +220,8 @@ window.onload = function() {
 	     	       };
 	    features = JSON.stringify(features);
 
+
+
     	$.ajax({
     		type: "GET",
     		url: serverurl+"/getCoordsFast",
@@ -221,7 +232,7 @@ window.onload = function() {
 				currentPosition: currentPosition,
     		}, 
 			success: function(coords){
-                    var d = new Date();
+                    isProcessing = false;
                     console.log(coords);
         			coordsDiv.value = coords;
                     coordsList.push(currentPosition + " " + coords + ' ' + d.getTime() + '\n'); 
@@ -229,10 +240,14 @@ window.onload = function() {
                     if(centering){
                         centerList.push(parseCoords(coords))                            
                     }else {
-                        showFeedback(coords);
+                        var quadrant = coordToQuadrant(coords);
+                        userSequence.push(quadrant)
+                        showFeedback(quadrant);
+                        console.log(d.getTime()-startTime)
                     }
 					
         	}, error: function(exception){
+                isProcessing = false;
     			console.log("Capture Exception: " + exception);
     		}
     	});
@@ -318,14 +333,79 @@ window.onload = function() {
     }
 
     function startSimonSays(){
-        trackButton.disabled = true;
-		cancelTrack();
-        isTracking = true;
-		resizeCanvas()
 
-        var sequence = []
+        getSequence()
+        //Show Sequence
+        var j=0
+        var showTimeout = setInterval(function(){
+            if(j<sequence.length){
+                showFeedback(sequence[j++]);
+            }else{
+                clearTimeout(showTimeout)                
+            }
+        }, 1000);
+        
     }
 
+    function getUserSequence(){
+        userSequence = []
+        captureTimeout = setInterval(function(){
+            if(loopUserInput()){
+                clearTimeout(captureTimeout)
+                console.log(userSequence)
+                console.log("Completed round ")  
+            }
+        }, 250);
+    }
+
+    function getSequence(){
+        maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+        sequence = []
+        for(var i=0; i<maxSeqLen; i++){
+            var newQuadrant = Math.floor(Math.random() * 4) + 1
+            if(i!=0 && newQuadrant == sequence[i-1]){
+                newQuadrant = (newQuadrant + 1) % 4 + 1
+            }
+            sequence.push(newQuadrant);
+        }
+        document.getElementById("sequence").value = sequence.toString();
+    }
+
+    function loopUserInput(){
+
+        if(!isProcessing){
+            if(sequenceMatching(sequence, userSequence)){
+                if(sequence.length != 0 && userSequence.length == sequence.length){
+                    clearTimeout(captureTimeout)                        
+                    return true
+                }else {
+                    isProcessing = true;
+                    sendDataToServer(-1);
+                    return false
+                }
+            }else{
+                userSequence = []
+                
+                isProcessing = true;
+                sendDataToServer(-1);
+                return false
+            }   
+        }
+    }
+
+    function sequenceMatching(sequence, userSequence){
+        if(sequence.length == 0){
+            return true;
+        }if(userSequence.length > sequence.length){
+            return false;
+        }for(var i=0; i<userSequence.length; i++){
+            if(sequence[i] != userSequence[i]){
+                return false;       
+            }else{
+                continue;   
+            }
+        }return true
+    }
 
     function getCenter(){
         
@@ -492,8 +572,7 @@ window.onload = function() {
 		}
 	}
 
-    function showFeedback(coord){
-        var quadrant = coordToQuadrant(coord)
+    function showFeedback(quadrant){
 		var x = null;
 		var y = null;
         var color = "#FFFFFF"
