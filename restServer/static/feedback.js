@@ -81,6 +81,7 @@ window.onload = function() {
 	document.getElementById('getPos').addEventListener("click", capture);
 	document.getElementById('getPos').disabled = disableGetPos;
 	document.getElementById('trackButton').addEventListener("click", startSimonSays);
+	document.getElementById('getSequence').addEventListener("click", getSequence);
 	document.getElementById('getUserSequence').addEventListener("click", getUserSequence);
     document.getElementById('cancelTrack').addEventListener("click", cancelButtonMethod);
     document.getElementById('getCenter').addEventListener("click", getCenter);
@@ -334,7 +335,9 @@ window.onload = function() {
 
     function startSimonSays(){
 
-        getSequence()
+        if(sequence.length == 0){
+            getSequence()
+        }
         //Show Sequence
         var j=0
         var showTimeout = setInterval(function(){
@@ -361,13 +364,22 @@ window.onload = function() {
     function getSequence(){
         maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
         sequence = []
-        for(var i=0; i<maxSeqLen; i++){
-            var newQuadrant = Math.floor(Math.random() * 4) + 1
-            if(i!=0 && newQuadrant == sequence[i-1]){
-                newQuadrant = (newQuadrant + 1) % 4 + 1
+//        for(var i=0; i<maxSeqLen; i++){
+//            var newQuadrant = Math.floor(Math.random() * 4) + 1
+//            if(i!=0 && newQuadrant == sequence[i-1]){
+//                newQuadrant = (newQuadrant + 1) % 4 + 1
+//            }
+//            sequence.push(newQuadrant);
+//        }
+        sequence.push(Math.floor(Math.random() * 4) + 1)
+        for(var i=1; i < maxSeqLen; i++){
+            var choose = (Math.random() < 0.5) ? -1 : 1;
+            var newQuadrant = (sequence[i-1] + choose) % 4
+            if(newQuadrant == 0){
+                newQuadrant = 4; 
             }
-            sequence.push(newQuadrant);
-        }
+            sequence.push(newQuadrant)
+        
         document.getElementById("sequence").value = sequence.toString();
     }
 
