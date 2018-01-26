@@ -242,7 +242,9 @@ window.onload = function() {
                         centerList.push(parseCoords(coords))                            
                     }else {
                         var quadrant = coordToQuadrant(coords);
-                        userSequence.push(quadrant)
+                        if(userSequence[userSequence.length-1] != quadrant){
+                            userSequence.push(quadrant)
+                        }
                         showFeedback(quadrant);
                         console.log(d.getTime()-startTime)
                     }
@@ -379,7 +381,7 @@ window.onload = function() {
                 newQuadrant = 4; 
             }
             sequence.push(newQuadrant)
-        
+        }
         document.getElementById("sequence").value = sequence.toString();
     }
 
