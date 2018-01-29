@@ -22,6 +22,10 @@ let CONTROLLER = {
     },
 
     getUserFeedbackCoords: () => {
+        CONTROLLER._getUserFeedbackCoords(true);
+    },
+
+    _getUserFeedbackCoords: (isLoopInput = false) => {
         let method = "GET";
         let url = serverURL + realTimeURL;
         let data = {
@@ -44,7 +48,7 @@ let CONTROLLER = {
                     }else {
                         // Matching so far, keep getting input
                         if(isLoopInput){
-                            CONTROLLER.getUserFeedbackCoords();
+                            CONTROLLER._getUserFeedbackCoords();
                         }
                     }
                 }else{
@@ -55,16 +59,36 @@ let CONTROLLER = {
         }, (error) => {
             console.log(error);
         });
-        
+
     },
 
 
     capture: () => {
+        CONTROLLER._getUserFeedbackCoords(false);
 
-        MODEL.saveContext.clearRect(0,0,MODEL.saveCanvas.width, MODEL.saveCanvas.height);
-        MODEL.saveContext.drawImage(MODEL.saveVideo,0,0,MODEL.saveCanvas.width,MODEL.saveCanvas.height);
-        let dataURL = MODEL.saveCanvas.toDataURL('image/jpeg');
+    },
 
+    getCenter: () => {
+        console.log("GetCenter() not implemented now");
+    },
+
+    cancelButtonMethod: () => {
+        console.log("cancelButtonMethod() not implemented now");
+
+    },
+
+    getNewSequence: () => {
+        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+        MODEL.setNewSequence(maxSeqLen);
+    },
+
+    startSimonSays: () => {
+        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+
+        if(MODEL.sequence.length == 0){
+            MODEL.setNewSequence(maxSeqLen);
+        }
+        DISPLAY.showSequence(MODEL.sequence);
     },
 
 

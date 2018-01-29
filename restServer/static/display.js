@@ -5,18 +5,23 @@ let DISPLAY = {
 	xstart: null,
 	radius: null,
 	ystart: null,
-	canvasContext: null,
+	faceContext: null,
     videoContext: null,
-    saveContext: null,  
+    saveContext: null,
+    showTimeout: null,
+    saveWidth: 800,
+    saveHeight: 600,
+    videoWRatio: null,
+    videoHRatio: null,
 
 
 	drawRectPoint: (point, canvasContext) => {
 		let [x, y]  = MODEL.getCanvasPointOffset(point);
 
-        canvasContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
-        canvasContext.beginPath();
-        canvasContext.arc(xstart+(x*xoffset),(y*r)+ystart,ptSize,0,2*Math.PI);
-		canvasContext.fill();
+        animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
+        animationContext.beginPath();
+        animationContext.arc(xstart+(x*xoffset),(y*r)+ystart,ptSize,0,2*Math.PI);
+		animationContext.fill();
 		
 	},
 
@@ -42,8 +47,8 @@ let DISPLAY = {
 	    DISPLAY.radius = window.innerHeight*0.4;
 		DISPLAY.ystart = DISPLAY.radius + DISPLAY.offset;
 
-		canvasContext.canvas.width = window.innerWidth-50;
-		canvasContext.canvas.height = 2*DISPLAY.radius+2*DISPLAY.offset;
+		animationContext.canvas.width = window.innerWidth-50;
+		animationContext.canvas.height = 2*DISPLAY.radius+2*DISPLAY.offset;
 
 	},
 
@@ -59,12 +64,46 @@ let DISPLAY = {
 
 	},
 
+    showSequence: (sequence) => {
+        if(sequence.length == 0){
+            showFeedback(-1);
+        }else{
+            let j=0
+            DISPLAY.showTimeout = setInterval(function(){
+                if(j<sequence.length){
+                    showFeedback(sequence[j++]);
+                }else{
+                    clearTimeout(DISPLAY.showTimeout)                
+                }
+            }, 1000);
+        }
+    },
+
     getPicToDataURL: () => {
         return DISPLAY.saveContext.toDataURL('image/jpeg');
     },
 
+    setup: () => {
+        DISPLAY.video = document.getElementById('video');
+        DISPLAY.saveVideo = document.getElementById('saveVideo');
+        DISPLAY.saveCanvas = document.getElementById('saveCanvas');
+
+        DISPLAY.saveContext = document.getElementById('saveCanvas').getContext('2d');
+        DISPLAY.videoContext = document.getElementById('videoCanvas').getContext('2d');
+        DISPLAY.animationContext = document.getElementById('animationCanvas').getContext('2d');
+
+        DISPLAY.saveCanvas.width = DISPLAY.saveWidth
+        DISPLAY.saveCanvas.height = DISPLAY.saveHeight
+        DISPLAY.saveVideo.width = DISPLAY.saveWidth
+        DISPLAY.saveVideo.height = DISPLAY.saveHeight
+        DISPLAY.videoWRatio = DISPLAY.saveVideo.clientWidth/DISPLAY.video.clientWidth;
+        DISPLAY.videoHRatio = DISPLAY.saveVideo.clientHeight/DISPLAY.video.clientHeight;
+
+    },
+
+
 };
 
 $(document).ready(() => {
-
+    DISPLAY.setup()
 });

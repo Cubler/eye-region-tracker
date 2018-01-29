@@ -3,9 +3,6 @@ let MODEL = {
 	centerList: [],
 	sequence: [],
 	userSequence: [],
-	saveContext: null,
-	saveVideo: null,
-	saveCanvas: null, 
 
 	getCanvasPointOffset: (point) => {
 		let x = null;
@@ -147,6 +144,7 @@ let MODEL = {
             }
             MODEL.sequence.push(newQuadrant);
         }
+        DISPLAY.updateSequence(MODEL.sequence);
         return Model.sequence;
 	},
 
