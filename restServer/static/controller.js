@@ -29,8 +29,8 @@ let CONTROLLER = {
         let method = "GET";
         let url = serverURL + realTimeURL;
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL();,
-            faceFeatures: TRACKER.getFormatFaceFeatures();,
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
             currentPosition: null,
             saveSubPath: null,
         };

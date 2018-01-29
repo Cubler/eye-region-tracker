@@ -5,8 +5,8 @@ let DISPLAY = {
 	xstart: null,
 	radius: null,
 	ystart: null,
-	faceContext: null,
     videoContext: null,
+    animationContext: null,
     saveContext: null,
     showTimeout: null,
     saveWidth: 800,
@@ -18,25 +18,25 @@ let DISPLAY = {
 	drawRectPoint: (point, canvasContext) => {
 		let [x, y]  = MODEL.getCanvasPointOffset(point);
 
-        animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
-        animationContext.beginPath();
-        animationContext.arc(xstart+(x*xoffset),(y*r)+ystart,ptSize,0,2*Math.PI);
-		animationContext.fill();
+        DISPLAY.animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
+        DISPLAY.animationContext.beginPath();
+        DISPLAY.animationContext.arc(xstart+(x*xoffset),(y*r)+ystart,ptSize,0,2*Math.PI);
+	    DISPLAY.animationContext.fill();
 		
 	},
 
     drawLandmarks: ([lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
 
-        videoContext.strokeStyle = '#a64ceb';
-        videoContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
-        videoContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
-        videoContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
+        DISPLAY.videoContext.strokeStyle = '#a64ceb';
+        DISPLAY.videoContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
+        DISPLAY.videoContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
+        DISPLAY.videoContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
 
         for(let l in landmarks){
-                videoContext.beginPath();
-                videoContext.fillStyle = "#fff"
-                videoContext.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
-                videoContext.fill();
+                DISPLAY.videoContext.beginPath();
+                DISPLAY.videoContext.fillStyle = "#fff"
+                DISPLAY.videoContext.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
+                DISPLAY.videoContext.fill();
         }
     },
 
@@ -47,8 +47,8 @@ let DISPLAY = {
 	    DISPLAY.radius = window.innerHeight*0.4;
 		DISPLAY.ystart = DISPLAY.radius + DISPLAY.offset;
 
-		animationContext.canvas.width = window.innerWidth-50;
-		animationContext.canvas.height = 2*DISPLAY.radius+2*DISPLAY.offset;
+        DISPLAY.animationContext.canvas.width = window.innerWidth-50;
+        DISPLAY.animationContext.canvas.height = 2*DISPLAY.radius+2*DISPLAY.offset;
 
 	},
 
@@ -56,10 +56,10 @@ let DISPLAY = {
 		let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
         let soundElement = document.getElementById(audio);
 
-        canvasContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
-        canvasContext.beginPath();
-        canvasContext.fillStyle = color;
-        canvasContext.fillRect(xstart+(x*xoffset),(y*r)+ystart,canvasContext.canvas.width/2, canvasContext.canvas.height/2);
+        DISPLAY.animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
+        DISPLAY.animationContext.beginPath();
+        DISPLAY.animationContext.fillStyle = color;
+        DISPLAY.animationContext.fillRect(xstart+(x*xoffset),(y*r)+ystart,canvasContext.canvas.width/2, canvasContext.canvas.height/2);
         soundElement.play();
 
 	},
@@ -79,6 +79,10 @@ let DISPLAY = {
         }
     },
 
+    updateSequence: (sequence) => {
+        document.getElementById('sequence').value = sequence.toString();
+    },
+
     getPicToDataURL: () => {
         return DISPLAY.saveContext.toDataURL('image/jpeg');
     },
@@ -87,6 +91,7 @@ let DISPLAY = {
         DISPLAY.video = document.getElementById('video');
         DISPLAY.saveVideo = document.getElementById('saveVideo');
         DISPLAY.saveCanvas = document.getElementById('saveCanvas');
+        DISPLAY.videoCanvas = document.getElementById('videoCanvas');
 
         DISPLAY.saveContext = document.getElementById('saveCanvas').getContext('2d');
         DISPLAY.videoContext = document.getElementById('videoCanvas').getContext('2d');

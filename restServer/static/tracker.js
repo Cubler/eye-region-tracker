@@ -25,19 +25,20 @@ let TRACKER = {
     },
 
     setFeatureBoxes: (leftArray, rightArray, faceArray) => {
-    	let [lxc,lyc,lw,lh] = targetBoxParams(leftArray,'eye');
-        let [rxc,ryc,rw,rh] = targetBoxParams(rightArray,'eye');
-	    let [fxc,fyc,fw,fh] = targetBoxParams(faceArray,'face');
+    	let [lxc,lyc,lw,lh] = TRACKER.targetBoxParams(leftArray,'eye');
+        let [rxc,ryc,rw,rh] = TRACKER.targetBoxParams(rightArray,'eye');
+	    let [fxc,fyc,fw,fh] = TRACKER.targetBoxParams(faceArray,'face');
 
 	    let eyeW = Math.max(lw,rw);
 	    let eyeH = Math.max(lh,rh);
 
-		TRACKER.rightEyeBoxCorner = [rxc-(eyeBoxSide/2), ryc-(eyeBoxSide/2)];
-        TRACKER.leftEyeBoxCorner = [lxc-(eyeBoxSide/2), lyc-(eyeBoxSide/2)];
-        TRACKER.faceBoxCorner = [fxc-(faceBoxSide/2), fyc-(faceBoxSide/2)];
-        TRACKER.faceArray = faceArray;
         TRACKER.eyeBoxLength = Math.max(eyeW,eyeW);
-        TRACKER.faceBoxSide = Math.max(fw,fh);
+        TRACKER.faceBoxLength = Math.max(fw,fh);
+
+		TRACKER.rightEyeBoxCorner = [rxc-(TRACKER.eyeBoxLength/2), ryc-(TRACKER.eyeBoxLength/2)];
+        TRACKER.leftEyeBoxCorner = [lxc-(TRACKER.eyeBoxLength/2), lyc-(TRACKER.eyeBoxLength/2)];
+        TRACKER.faceBoxCorner = [fxc-(TRACKER.faceBoxLength/2), fyc-(TRACKER.faceBoxLength/2)];
+        TRACKER.faceArray = faceArray;
 
     },
 
@@ -99,12 +100,14 @@ let TRACKER = {
 
 		tracker.on('track', function(event) {
 
-		    context.clearRect(0,0,canvas.width, canvas.height);
+		    DISPLAY.videoContext.clearRect(0,0,DISPLAY.videoCanvas.width, DISPLAY.videoCanvas.height);
 
 		    if(!event.data){
 	            return;
 	        }else{
-		    	event.data.landmarks.forEach(myTrackerCallback(landmarks));
+		    	event.data.landmarks.forEach(function(landmarks){
+                    TRACKER.myTrackerCallback(landmarks);
+                });
 		    }
 		});
 
@@ -121,10 +124,8 @@ let TRACKER = {
 
 	},
 
-
-
 };
 
 $(document).ready(() => {
-    TRACKER.setup()
+    TRACKER.setup();
 });

@@ -145,12 +145,9 @@ let MODEL = {
             MODEL.sequence.push(newQuadrant);
         }
         DISPLAY.updateSequence(MODEL.sequence);
-        return Model.sequence;
+        return MODEL.sequence;
 	},
 
 
 }
 
-$(document).ready(() => {
-	MODEL.setup();
-});
