@@ -15,7 +15,7 @@ let DISPLAY = {
     videoHRatio: null,
 
 
-	drawRectPoint: (point, canvasContext) => {
+	drawRectPoint: (point) => {
 		let [x, y]  = MODEL.getCanvasPointOffset(point);
 
         DISPLAY.animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
@@ -40,7 +40,7 @@ let DISPLAY = {
         }
     },
 
-	resizeCanvas: (canvasContext) => {
+	resizeCanvas: () => {
 		DISPLAY.offset = window.innerWidth * 0.02;
 		DISPLAY.xoffset = (window.innerWidth-50)/2-DISPLAY.offset;
    		DISPLAY.xstart = (window.innerWidth-50)/2;
@@ -52,26 +52,26 @@ let DISPLAY = {
 
 	},
 
-	showFeedback: (canvasContext, quadrant) => {
+	showFeedback: (quadrant) => {
 		let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
-        let soundElement = document.getElementById(audio);
+        let soundElement = document.getElementById(audioID);
 
-        DISPLAY.animationContext.clearRect(0,0,canvasContext.canvas.width, canvasContext.canvas.height);
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
         DISPLAY.animationContext.fillStyle = color;
-        DISPLAY.animationContext.fillRect(xstart+(x*xoffset),(y*r)+ystart,canvasContext.canvas.width/2, canvasContext.canvas.height/2);
+        DISPLAY.animationContext.fillRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.radius)+DISPLAY.ystart, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
         soundElement.play();
 
 	},
 
     showSequence: (sequence) => {
         if(sequence.length == 0){
-            showFeedback(-1);
+            DISPLAY.showFeedback(-1);
         }else{
             let j=0
             DISPLAY.showTimeout = setInterval(function(){
                 if(j<sequence.length){
-                    showFeedback(sequence[j++]);
+                    DISPLAY.showFeedback(sequence[j++]);
                 }else{
                     clearTimeout(DISPLAY.showTimeout)                
                 }
@@ -84,7 +84,9 @@ let DISPLAY = {
     },
 
     getPicToDataURL: () => {
-        return DISPLAY.saveContext.toDataURL('image/jpeg');
+        DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 
     setup: () => {
@@ -103,7 +105,8 @@ let DISPLAY = {
         DISPLAY.saveVideo.height = DISPLAY.saveHeight
         DISPLAY.videoWRatio = DISPLAY.saveVideo.clientWidth/DISPLAY.video.clientWidth;
         DISPLAY.videoHRatio = DISPLAY.saveVideo.clientHeight/DISPLAY.video.clientHeight;
-
+        
+        DISPLAY.resizeCanvas();
     },
 
 

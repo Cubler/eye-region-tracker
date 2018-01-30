@@ -31,4 +31,8 @@ $(document).ready(() => {
     $('#getCenter').click(function() {
         CONTROLLER.getCenter();
     });
+
+    $(window).resize(function(){
+        DISPLAY.resizeCanvas();
+    });
 });

@@ -8,9 +8,9 @@ let CONTROLLER = {
     getRequest: (method, url, data) =>{
         return new Promise((resolve, reject) => {
             $.ajax({
-                type: this.method,
-                url: this.url,
-                data: this.data,
+                type: method,
+                url: url,
+                data: data,
                 success: function(coords){
                    resolve(coords);
                 }, 
@@ -22,12 +22,13 @@ let CONTROLLER = {
     },
 
     getUserFeedbackCoords: () => {
+        MODEL.userSequence = [];
         CONTROLLER._getUserFeedbackCoords(true);
     },
 
     _getUserFeedbackCoords: (isLoopInput = false) => {
         let method = "GET";
-        let url = serverURL + realTimeURL;
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
             imgBase64: DISPLAY.getPicToDataURL(),
             faceFeatures: TRACKER.getFormatFaceFeatures(),
@@ -36,24 +37,28 @@ let CONTROLLER = {
         };
 
         CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let quadrant = coordToQuadrant(coords);
+            let quadrant = MODEL.coordsToQuadrant(coords);
             if(MODEL.userSequence.length == 0 || MODEL.userSequence[MODEL.userSequence.length-1] != quadrant){
                 MODEL.userSequence.push(quadrant);
                 DISPLAY.showFeedback(quadrant);
 
-                if(sequenceMatching(MODEL.sequence, MODEL.userSequence)){
+                if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
                     if(MODEL.sequence.length != 0 && MODEL.userSequence.length == MODEL.sequence.length){
                         console.log("Completed round!")
                         return;
                     }else {
                         // Matching so far, keep getting input
                         if(isLoopInput){
-                            CONTROLLER._getUserFeedbackCoords();
+                            CONTROLLER._getUserFeedbackCoords(true);
                         }
                     }
                 }else{
                     console.log("Incorrect quadrant: " + quadrant);
                 }  
+            }else{
+                if(isLoopInput){
+                    CONTROLLER._getUserFeedbackCoords(true);
+                }
             }
 
         }, (error) => {
@@ -64,6 +69,7 @@ let CONTROLLER = {
 
 
     capture: () => {
+        MODEL.userSequence = [];
         CONTROLLER._getUserFeedbackCoords(false);
 
     },

@@ -72,12 +72,12 @@ let TRACKER = {
 	},
 
 	getFormatFaceFeatures: () => {
-	    let [lx,ly] = TRACKER.leftEyeBoxCorner.map(x=>[x[0]*videoWRatio,x[1]*videoHRatio]);;
-        let [rx,ry] = TRACKER.rightEyeBoxCorner.map(x=>[x[0]*videoWRatio,x[1]*videoHRatio]);;
-        let [fx,fy] = TRACKER.faceBoxCorner.map(x=>[x[0]*videoWRatio,x[1]*videoHRatio]);;
-	    let eyeBoxSide = TRACKER.eyeBoxLength * videoWRatio;
-	    let faceBoxSide = TRACKER.faceBoxLength * videoWRatio;
-	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*videoWRatio,x[1]*videoHRatio]);
+	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+	    let eyeBoxSide = TRACKER.eyeBoxLength * DISPLAY.videoWRatio;
+	    let faceBoxSide = TRACKER.faceBoxLength * DISPLAY.videoWRatio;
+	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*DISPLAY.videoWRatio,x[1]*DISPLAY.videoHRatio]);
 
 	    let features = {'leftEye': [lx,ly,eyeBoxSide,eyeBoxSide],
 	                'rightEye': [rx,ry,eyeBoxSide,eyeBoxSide],

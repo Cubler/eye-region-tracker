@@ -62,7 +62,7 @@ let MODEL = {
             default:
             	x=-1;
                 y=-1;
-                color = "#FFFFFF";
+                color = "#000000";
                 audioID = "default";
                 break;
     	}
@@ -72,8 +72,8 @@ let MODEL = {
 	// Coordinate String to corresponding canvas quadrant. Quadrant numbering 
 	// correspond both to algebra quadrants and the tracking point number
 	coordsToQuadrant: (coords) => {
-        let [x,y] = parseCoords(coord);
-        let [xMid, yMid] = getAvgCenter();
+        let [x,y] = MODEL.parseCoords(coords);
+        let [xMid, yMid] = MODEL.getAvgCenter();
 
         if(x > xMid){
             if(y > yMid){ 
