@@ -1,2 +1,4 @@
 **/myData
 *.pyc
+*.html~
+*.js~
