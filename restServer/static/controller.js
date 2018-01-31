@@ -53,6 +53,9 @@ let CONTROLLER = {
                         }
                     }
                 }else{
+                    if(isLoopInput){
+                        CONTROLLER._getUserFeedbackCoords(true);
+                    }
                     console.log("Incorrect quadrant: " + quadrant);
                 }  
             }else{
@@ -79,6 +82,7 @@ let CONTROLLER = {
     },
 
     cancelButtonMethod: () => {
+        CONTROLLER.isCanceled = true;
         console.log("cancelButtonMethod() not implemented now");
 
     },
