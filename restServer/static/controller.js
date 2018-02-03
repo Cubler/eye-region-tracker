@@ -131,7 +131,7 @@ let CONTROLLER = {
     	let round = event.detail+1;
 
     	if(round <= MODEL.sequence.length){
-	    	DISPLAY.showSequence(MODEL.sequence.slice(0,round-1)).then(() => {
+	    	DISPLAY.showSequence(MODEL.sequence.slice(0,round)).then(() => {
 	    		CONTROLLER.getUserFeedbackCoords(round);
 	   		});
     	}else {
