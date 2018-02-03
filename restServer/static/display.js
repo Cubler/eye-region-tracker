@@ -13,6 +13,7 @@ let DISPLAY = {
     saveHeight: 600,
     videoWRatio: null,
     videoHRatio: null,
+    scoreElement: null,
 
 
 	drawRectPoint: (point) => {
@@ -65,18 +66,21 @@ let DISPLAY = {
 	},
 
     showSequence: (sequence) => {
-        if(sequence.length == 0){
-            DISPLAY.showFeedback(-1);
-        }else{
-            let j=0
-            DISPLAY.showTimeout = setInterval(function(){
-                if(j<sequence.length){
-                    DISPLAY.showFeedback(sequence[j++]);
-                }else{
-                    clearTimeout(DISPLAY.showTimeout)                
-                }
-            }, 1000);
-        }
+        return new Promise((resolve,reject) => {
+            if(sequence.length == 0){
+                DISPLAY.showFeedback(-1);
+            }else{
+                let j=0
+                DISPLAY.showTimeout = setInterval(function(){
+                    if(j<sequence.length){
+                        DISPLAY.showFeedback(sequence[j++]);
+                    }else{
+                        clearTimeout(DISPLAY.showTimeout)
+                        resolve()                
+                    }
+                }, 1000);
+            }
+        });
     },
 
     updateSequence: (sequence) => {
@@ -89,11 +93,25 @@ let DISPLAY = {
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 
+    displayScore: (score) => {
+        DISPLAY.scoreElement.value = score;
+
+    },
+
+    showRoundComplete: () => {
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+        DISPLAY.animationContext.beginPath();
+        DISPLAY.animationContext.fillStyle = "#00FF00";
+        DISPLAY.animationContext.fillRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+        
+    },
+
     setup: () => {
         DISPLAY.video = document.getElementById('video');
         DISPLAY.saveVideo = document.getElementById('saveVideo');
         DISPLAY.saveCanvas = document.getElementById('saveCanvas');
         DISPLAY.videoCanvas = document.getElementById('videoCanvas');
+        DISPLAY.scoreElement = document.getElementById('score');
 
         DISPLAY.saveContext = document.getElementById('saveCanvas').getContext('2d');
         DISPLAY.videoContext = document.getElementById('videoCanvas').getContext('2d');
@@ -108,6 +126,7 @@ let DISPLAY = {
         
         DISPLAY.resizeCanvas();
     },
+
 
 
 };

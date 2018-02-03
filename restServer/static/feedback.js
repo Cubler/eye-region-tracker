@@ -21,7 +21,7 @@ $(document).ready(() => {
     });
 
     $('#getUserSequence').click(function() {
-        CONTROLLER.getUserFeedbackCoords();
+        CONTROLLER.getUserFeedbackCoords(-1);
     });
 
     $('#cancelTrack').click(function() {

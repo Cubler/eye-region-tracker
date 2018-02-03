@@ -3,6 +3,7 @@ let MODEL = {
 	centerList: [],
 	sequence: [],
 	userSequence: [],
+    score: 0,
 
 	getCanvasPointOffset: (point) => {
 		let x = null;
@@ -147,6 +148,11 @@ let MODEL = {
         DISPLAY.updateSequence(MODEL.sequence);
         return MODEL.sequence;
 	},
+
+    updateScore: (scoreChange) => {
+        MODEL.score += scoreChange;
+        DISPLAY.displayScore(MODEL.score);
+    },
 
 
 }

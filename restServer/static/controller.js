@@ -3,6 +3,11 @@ let CONTROLLER = {
 	serverURL: "https://localhost:3000",
     realTimeURL: "/getCoordsFast",
     isLoopInput: false,
+    missPoints: -5,
+    hitPoints: 10,
+    HIT: 1,
+    MISS: 0,
+
 
 
     getRequest: (method, url, data) =>{
@@ -21,12 +26,15 @@ let CONTROLLER = {
         });
     },
 
-    getUserFeedbackCoords: () => {
+    getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
-        CONTROLLER._getUserFeedbackCoords(true);
+        
+    	CONTROLLER._getUserFeedbackCoords(round, true, false);
+
+
     },
 
-    _getUserFeedbackCoords: (isLoopInput = false) => {
+    _getUserFeedbackCoords: (round = -1, isLoopInput = false, missed = false) => {
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
@@ -43,21 +51,41 @@ let CONTROLLER = {
                 DISPLAY.showFeedback(quadrant);
 
                 if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
-                    if(MODEL.sequence.length != 0 && MODEL.userSequence.length == MODEL.sequence.length){
+                   	// Correct quadrant (Hit)
+                   	MODEL.updateScore(CONTROLLER.hitPoints);
+
+                    if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
                         console.log("Completed round!")
-                        return;
+                        DISPLAY.showRoundComplete();
+                        setTimeout(()=>{
+                        	// Trigger Event
+                        	CONTROLLER.triggerRoundComplete(round);
+
+                        },1000)
                     }else {
                         // Matching so far, keep getting input
                         if(isLoopInput){
-                            CONTROLLER._getUserFeedbackCoords(true);
+                            CONTROLLER._getUserFeedbackCoords(round, true);
                         }
                     }
                 }else{
+                	MODEL.userSequence.pop();
+                	// Incorrect quadrant (Miss)
+                	if(!missed){
+                		MODEL.updateScore(CONTROLLER.missPoints);
+                	}
+                    if(isLoopInput){
+                        CONTROLLER._getUserFeedbackCoords(round, true, true);
+                    }
                     console.log("Incorrect quadrant: " + quadrant);
                 }  
             }else{
+                DISPLAY.showFeedback(quadrant);
+
+            	// Quadrant is the same as the one currently displayed or 
+            	// there is no userSequence
                 if(isLoopInput){
-                    CONTROLLER._getUserFeedbackCoords(true);
+                    CONTROLLER._getUserFeedbackCoords(round, true);
                 }
             }
 
@@ -68,9 +96,10 @@ let CONTROLLER = {
     },
 
 
+
     capture: () => {
         MODEL.userSequence = [];
-        CONTROLLER._getUserFeedbackCoords(false);
+        CONTROLLER._getUserFeedbackCoords(-1, false, false);
 
     },
 
@@ -79,8 +108,8 @@ let CONTROLLER = {
     },
 
     cancelButtonMethod: () => {
+        CONTROLLER.isCanceled = true;
         console.log("cancelButtonMethod() not implemented now");
-
     },
 
     getNewSequence: () => {
@@ -90,13 +119,41 @@ let CONTROLLER = {
 
     startSimonSays: () => {
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+        MODEL.setNewSequence(maxSeqLen);
+        CONTROLLER.triggerRoundComplete(0);
+    },
 
-        if(MODEL.sequence.length == 0){
-            MODEL.setNewSequence(maxSeqLen);
-        }
-        DISPLAY.showSequence(MODEL.sequence);
+
+    // Handle either finishing the game if all rounds 
+    // are complete or continuing to next round.
+    // Event.round = round that was completed
+    roundCompleteHandler: (event) => {
+    	let round = event.detail+1;
+
+    	if(round <= MODEL.sequence.length){
+	    	DISPLAY.showSequence(MODEL.sequence.slice(0,round)).then(() => {
+	    		CONTROLLER.getUserFeedbackCoords(round);
+	   		});
+    	}else {
+    		DISPLAY.showRoundComplete();
+    	}
+    },
+
+    triggerRoundComplete: (round) => {
+    	let event = new CustomEvent('roundComplete', {
+    		detail: round,
+    	});
+    	window.dispatchEvent(event);
+    },
+
+    setup: () => {
+    	window.addEventListener('roundComplete', CONTROLLER.roundCompleteHandler);
     },
 
 
 
 } 
+
+$(document).ready(() => {
+    CONTROLLER.setup()
+});
