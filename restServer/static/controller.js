@@ -55,13 +55,13 @@ let CONTROLLER = {
                    	MODEL.updateScore(CONTROLLER.hitPoints);
 
                     if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
-                        console.log("Completed round!")
-                        DISPLAY.showRoundComplete();
-                        setTimeout(()=>{
-                        	// Trigger Event
-                        	CONTROLLER.triggerRoundComplete(round);
-
-                        },1000)
+                        // Round Complete, trigger event
+                        setTimeout(()=> {
+                        	DISPLAY.showComment("Round Complete!").then(() => {
+	                        	CONTROLLER.triggerRoundComplete(round);
+                        	});
+                        },500);
+                        
                     }else {
                         // Matching so far, keep getting input
                         if(isLoopInput){
@@ -77,11 +77,9 @@ let CONTROLLER = {
                     if(isLoopInput){
                         CONTROLLER._getUserFeedbackCoords(round, true, true);
                     }
-                    console.log("Incorrect quadrant: " + quadrant);
+                    // console.log("Incorrect quadrant: " + quadrant);
                 }  
             }else{
-                DISPLAY.showFeedback(quadrant);
-
             	// Quadrant is the same as the one currently displayed or 
             	// there is no userSequence
                 if(isLoopInput){
@@ -131,9 +129,13 @@ let CONTROLLER = {
     	let round = event.detail+1;
 
     	if(round <= MODEL.sequence.length){
-	    	DISPLAY.showSequence(MODEL.sequence.slice(0,round)).then(() => {
-	    		CONTROLLER.getUserFeedbackCoords(round);
-	   		});
+		    DISPLAY.showComment("Next Sequence").then(() => {
+		    	DISPLAY.showSequence(MODEL.sequence.slice(0,round)).then(() => {
+		    		DISPLAY.showComment("Get Ready!").then(() => {
+		    			CONTROLLER.getUserFeedbackCoords(round);
+		    		});
+		   		});
+		   	});
     	}else {
     		DISPLAY.showRoundComplete();
     	}

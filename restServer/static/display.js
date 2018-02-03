@@ -66,6 +66,8 @@ let DISPLAY = {
 	},
 
     showSequence: (sequence) => {
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+        DISPLAY.updateSequence(sequence)
         return new Promise((resolve,reject) => {
             if(sequence.length == 0){
                 DISPLAY.showFeedback(-1);
@@ -76,10 +78,24 @@ let DISPLAY = {
                         DISPLAY.showFeedback(sequence[j++]);
                     }else{
                         clearTimeout(DISPLAY.showTimeout)
+
                         resolve()                
                     }
                 }, 1000);
             }
+        });
+    },
+
+    showComment: (comment) => {
+        return new Promise((resolve, reject) => {
+            DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+            DISPLAY.animationContext.fillStyle = "#000000";
+            DISPLAY.animationContext.font = "80px Georgia";
+            DISPLAY.animationContext.fillText(comment, DISPLAY.xstart*(5.0/6), DISPLAY.ystart);
+            setTimeout(() => {
+                DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+                resolve();
+            }, 2000);
         });
     },
 
