@@ -29,12 +29,12 @@ let CONTROLLER = {
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
         
-    	CONTROLLER._getUserFeedbackCoords(round, true, false);
+    	CONTROLLER._getUserFeedbackCoords(round, true, -1);
 
 
     },
 
-    _getUserFeedbackCoords: (round = -1, isLoopInput = false, missed = false) => {
+    _getUserFeedbackCoords: (round = -1, isLoopInput = false, lastQuadrant = -1) => {
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
@@ -69,10 +69,16 @@ let CONTROLLER = {
                         }
                     }
                 }else{
-                	MODEL.userSequence.pop();
                 	// Incorrect quadrant (Miss)
-                	if(!missed){
-                		MODEL.updateScore(CONTROLLER.missPoints);
+                	MODEL.userSequence.pop();
+
+                	if(lastQuadrant != -1){
+                		// Have missed before
+                		if(lastQuadrant != quadrant){
+                			// This is a new miss quadrant
+                			MODEL.updateScore(CONTROLLER.missPoints);
+                			MODEL.missedQuadrant = quadrant;
+                		}
                 	}
                     if(isLoopInput){
                         CONTROLLER._getUserFeedbackCoords(round, true, true);
@@ -80,7 +86,7 @@ let CONTROLLER = {
                     // console.log("Incorrect quadrant: " + quadrant);
                 }  
             }else{
-            	// Quadrant is the same as the one currently displayed or 
+            	// Quadrant is the same as the most recent, correct quadrant or
             	// there is no userSequence
                 if(isLoopInput){
                     CONTROLLER._getUserFeedbackCoords(round, true);
@@ -97,7 +103,7 @@ let CONTROLLER = {
 
     capture: () => {
         MODEL.userSequence = [];
-        CONTROLLER._getUserFeedbackCoords(-1, false, false);
+        CONTROLLER._getUserFeedbackCoords(-1, false, -1);
 
     },
 
