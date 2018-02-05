@@ -1,15 +1,21 @@
+// CONTROLLER handles user input and procedures/logic for provided components such as simonSays
+
+
 let CONTROLLER = {
 
+	// The server URL to send requests to
 	serverURL: "https://localhost:3000",
+
+	// The path for the no-save coordinates request
     realTimeURL: "/getCoordsFast",
-    isLoopInput: false,
+
+    // The change in score for a miss and a hit respectively 
     missPoints: -5,
     hitPoints: 10,
-    HIT: 1,
-    MISS: 0,
 
 
-
+    // Returns a promise for a server request.
+    // method: "GET" (or potentially "POST")
     getRequest: (method, url, data) =>{
         return new Promise((resolve, reject) => {
             $.ajax({
@@ -26,6 +32,7 @@ let CONTROLLER = {
         });
     },
 
+    // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
         
@@ -34,6 +41,8 @@ let CONTROLLER = {
 
     },
 
+    // Helper function for the UserFeedback session that determines the next step in the UserFeedback session.  
+    // Cases 
     _getUserFeedbackCoords: (round = -1, isLoopInput = false, lastQuadrant = -1) => {
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
@@ -46,12 +55,16 @@ let CONTROLLER = {
 
         CONTROLLER.getRequest(method, url, data).then((coords) => {
             let quadrant = MODEL.coordsToQuadrant(coords);
+
+
             if(MODEL.userSequence.length == 0 || MODEL.userSequence[MODEL.userSequence.length-1] != quadrant){
+               	// If there hasn't been a feedback from a user yet or 
+               	// if the returned quadrant is different from the current quadrant
                 MODEL.userSequence.push(quadrant);
                 DISPLAY.showFeedback(quadrant);
 
                 if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
-                   	// Correct quadrant (Hit)
+                   	// (Hit) New quadrant is the correct next quadrant in the sequence
                    	MODEL.updateScore(CONTROLLER.hitPoints);
 
                     if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
@@ -63,19 +76,19 @@ let CONTROLLER = {
                         },500);
                         
                     }else {
-                        // Matching so far, keep getting input
+                        // The userSequence is a partial match. Need to keep getting input
                         if(isLoopInput){
                             CONTROLLER._getUserFeedbackCoords(round, true);
                         }
                     }
                 }else{
-                	// Incorrect quadrant (Miss)
+                	// (Miss) New quadrant is not the correct next quadrant in the sequence
                 	MODEL.userSequence.pop();
 
                 	if(lastQuadrant != -1){
-                		// Have missed before
+                		// If there has been a miss in the current round
                 		if(lastQuadrant != quadrant){
-                			// This is a new miss quadrant
+                			// There has been a new quadrant that is also a miss. 
                 			MODEL.updateScore(CONTROLLER.missPoints);
                 			MODEL.missedQuadrant = quadrant;
                 		}
@@ -100,12 +113,13 @@ let CONTROLLER = {
     },
 
 
-
+    // Preforms a one time request to get and show coordinates from the server.
     capture: () => {
         MODEL.userSequence = [];
         CONTROLLER._getUserFeedbackCoords(-1, false, -1);
 
     },
+
 
     getCenter: () => {
         console.log("GetCenter() not implemented now");
@@ -116,11 +130,13 @@ let CONTROLLER = {
         console.log("cancelButtonMethod() not implemented now");
     },
 
+    // Sets a new sequence with the sequence length coming from the user input.
     getNewSequence: () => {
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
         MODEL.setNewSequence(maxSeqLen);
     },
 
+    // Called when the user decides to start the game. Starts a new SimonSays game
     startSimonSays: () => {
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
         MODEL.setNewSequence(maxSeqLen);
@@ -128,8 +144,7 @@ let CONTROLLER = {
     },
 
 
-    // Handle either finishing the game if all rounds 
-    // are complete or continuing to next round.
+    // Handle either finishing the game if all rounds are complete or continuing to next round.
     // Event.round = round that was completed
     roundCompleteHandler: (event) => {
     	let round = event.detail+1;
@@ -147,6 +162,8 @@ let CONTROLLER = {
     	}
     },
 
+    // Creates a custom Event that encapsulates the round that was just completed 
+    // and dispatches that event.
     triggerRoundComplete: (round) => {
     	let event = new CustomEvent('roundComplete', {
     		detail: round,

@@ -1,3 +1,13 @@
+// Display.js handles all graphics for feedback.html and dataCollection.html. 
+// Application is designed to be used with a maximized browser window for the eye-tracker to 
+// have the best performance.
+// It requires a:
+//      video element for processing features
+//      save video element for capturing a higher resolution
+//      canvases for each of the videos to display features and send to the server
+//      animation canvas for data collection or SimonSays.
+
+
 let DISPLAY = {
 
 	canvasOffset: null,
@@ -16,6 +26,10 @@ let DISPLAY = {
     scoreElement: null,
 
 
+    // Draws the point in the corner of the appropriate quadrant.
+    // Point domain: 
+    //      0: center of the screen
+    //      1-4: the corresponding algebraic quadrants 
 	drawRectPoint: (point) => {
 		let [x, y]  = MODEL.getCanvasPointOffset(point);
 
@@ -26,6 +40,10 @@ let DISPLAY = {
 		
 	},
 
+    // Draws the eye boxes, the face box, and the landmark point found by the face detection package.
+    // [x,y]: the top left coordinate for the corresponding eye or face box
+    // boxlength: the length of the side of the square for the given feature
+    // landmarks: array of point provided by the face detection package 
     drawLandmarks: ([lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
 
         DISPLAY.videoContext.strokeStyle = '#a64ceb';
@@ -41,6 +59,7 @@ let DISPLAY = {
         }
     },
 
+    // resizes the animation canvas so that it fills the window and is independent of browser.
 	resizeCanvas: () => {
 		DISPLAY.offset = window.innerWidth * 0.02;
 		DISPLAY.xoffset = (window.innerWidth-50)/2-DISPLAY.offset;
@@ -53,6 +72,7 @@ let DISPLAY = {
 
 	},
 
+    // Given a quadrant, color the quadrant and play its unique sound.
 	showFeedback: (quadrant) => {
 		let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
         let soundElement = document.getElementById(audioID);
@@ -65,9 +85,12 @@ let DISPLAY = {
 
 	},
 
+    // Return a promise that resolves when the the animation for the given sequence
+    // has finished. The animation consists of showing the unique feedback for each 
+    // quadrant in the sequence for one second.
     showSequence: (sequence) => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
-        DISPLAY.updateSequence(sequence)
+        DISPLAY.showSequenceText(sequence)
         return new Promise((resolve,reject) => {
             if(sequence.length == 0){
                 DISPLAY.showFeedback(-1);
@@ -86,7 +109,8 @@ let DISPLAY = {
         });
     },
 
-    showComment: (comment) => {
+    // Displays the comment in the relative center of the screen for the time duration (in milliseconds) 
+    showComment: (comment, time = 2000) => {
         return new Promise((resolve, reject) => {
             DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
             DISPLAY.animationContext.fillStyle = "#000000";
@@ -95,25 +119,29 @@ let DISPLAY = {
             setTimeout(() => {
                 DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
                 resolve();
-            }, 2000);
+            }, time);
         });
     },
 
-    updateSequence: (sequence) => {
+    // Writes the provided sequence into the sequence element so the current sequence is viewable to users.
+    showSequenceText: (sequence) => {
         document.getElementById('sequence').value = sequence.toString();
     },
 
+    // returns the current camera frame as a dataURL
     getPicToDataURL: () => {
         DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 
+    // Writes the score parameter in the score html element so it is displayed on the page.
     displayScore: (score) => {
         DISPLAY.scoreElement.value = score;
 
     },
 
+    // Displays the animation canvas as all green
     showRoundComplete: () => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
@@ -122,6 +150,7 @@ let DISPLAY = {
         
     },
 
+    // Initializes all variables referring to HTML elements that are needed for Display.js
     setup: () => {
         DISPLAY.video = document.getElementById('video');
         DISPLAY.saveVideo = document.getElementById('saveVideo');
