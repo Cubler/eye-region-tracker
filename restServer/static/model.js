@@ -1,10 +1,28 @@
+// Model.js encapsulates the metadata and preforms calculations for dataCollection.html and feedback.js
+// Terminology: 
+//      point: {0-4}: 0: center of screen; 1-4: corresponding algebraic quadrants
+//      quadrant: {1-4}: corresponding algebraic quadrants (same as points 1-4)
 let MODEL = {
 
+    // Optional: used to find the center of the screen for calibration 
 	centerList: [],
+
+    // The sequence to match for the current round of simonsays.
+    // For info on how its generated, see setSequence()
 	sequence: [],
+
+    // The current user sequence for any given round. 
+    // Only will ever be a partial sequence of the true sequence.
+    // Used to determine how far and what is the next correct sequence.
 	userSequence: [],
+
+    // The current score for SimonSays
     score: 0,
 
+    // Given a point such that
+    //      0: center of screen
+    //      1-4: algebraic quadrants
+    // returns the x and y offsets from the origin for that point
 	getCanvasPointOffset: (point) => {
 		let x = null;
 		let y = null;
@@ -28,7 +46,7 @@ let MODEL = {
 		return [x,y]
 	},
 
-
+    // given a quadrant
 	getDisplayQuadrantInfo: (quadrant) => {
 		let x = null;
 		let y = null;
@@ -70,8 +88,7 @@ let MODEL = {
     	return [x,y,color,audioID];
 	},
 
-	// Coordinate String to corresponding canvas quadrant. Quadrant numbering 
-	// correspond both to algebra quadrants and the tracking point number
+	// Given coordinate as a String return corresponding canvas quadrant.
 	coordsToQuadrant: (coords) => {
         let [x,y] = MODEL.parseCoords(coords);
         let [xMid, yMid] = MODEL.getAvgCenter();
@@ -134,10 +151,13 @@ let MODEL = {
         }return true
 	},
 
-	setNewSequence: (maxSeqLen) => {
+    // given the desired sequence length, generate and set the current sequence 
+    // such that subsequent quadrants are either one clockwise or counter-clockwise
+    // from the current previous quadrant. Never the same or across the origin.
+	setNewSequence: (seqLen) => {
 		MODEL.sequence = [];
 		MODEL.sequence.push(Math.floor(Math.random() * 4) + 1)
-        for(var i=1; i < maxSeqLen; i++){
+        for(var i=1; i < seqLen; i++){
             var choose = (Math.random() < 0.5) ? -1 : 1;
             var newQuadrant = (MODEL.sequence[i-1] + choose) % 4
             if(newQuadrant == 0){
@@ -145,10 +165,12 @@ let MODEL = {
             }
             MODEL.sequence.push(newQuadrant);
         }
-        DISPLAY.updateSequence(MODEL.sequence);
+        DISPLAY.showSequenceText(MODEL.sequence);
         return MODEL.sequence;
 	},
 
+    // Given a number to change the score by (scoreChange), update to the 
+    // new score and display it.
     updateScore: (scoreChange) => {
         MODEL.score += scoreChange;
         DISPLAY.displayScore(MODEL.score);
