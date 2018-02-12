@@ -92,7 +92,7 @@ let MODEL = {
 	coordsToQuadrant: (coords) => {
         let [x,y] = MODEL.parseCoords(coords);
         let [xMid, yMid] = MODEL.getAvgCenter();
-
+        xMid = 0;
         if(x > xMid){
             if(y > yMid){ 
                 quadrant = 1
@@ -128,8 +128,8 @@ let MODEL = {
             return [0,-2]
         }
         for(let i = 0; i < MODEL.centerList.length; i++){
-            xTotal += MODEL.centerList[i][0]
-            yTotal += MODEL.centerList[i][1]
+            xTotal +=  MODEL.centerList[i][0];
+            yTotal +=  MODEL.centerList[i][1];
         }
         return [xTotal/MODEL.centerList.length, yTotal/MODEL.centerList.length]
 	},

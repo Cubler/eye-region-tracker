@@ -32,6 +32,22 @@ $(document).ready(() => {
         CONTROLLER.getCenter();
     });
 
+    $('#downloadLink').click(() => {
+        CONTROLLER.downloadPhoto($('#downloadLink')[0]);
+    });
+
+    $('#stopTracking').click(()=>{
+        CONTROLLER.stopTracking();
+    });
+
+    $('#startTracking').click(()=>{
+        CONTROLLER.startTracking();
+    });
+
+    $('#getEdges').click(()=>{
+        TRACKER.edgeDetection();
+    });
+
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
     });
