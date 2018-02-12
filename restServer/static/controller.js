@@ -251,6 +251,7 @@ let CONTROLLER = {
     	});
     },
 
+
     getCenter: () => {
     	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
     		DISPLAY.drawRectPoint(0);
