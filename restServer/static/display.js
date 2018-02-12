@@ -24,7 +24,7 @@ let DISPLAY = {
     videoWRatio: null,
     videoHRatio: null,
     scoreElement: null,
-    ptSize: 5,
+    ptSize: 15,
 
 
     // Draws the point in the corner of the appropriate quadrant.
@@ -34,9 +34,9 @@ let DISPLAY = {
 	drawRectPoint: (point) => {
 		let [x, y]  = MODEL.getCanvasPointOffset(point);
 
-        //DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
-        DISPLAY.animationContext.fillStyle = "000000";
+        DISPLAY.animationContext.fillStyle = "#000000";
         DISPLAY.animationContext.arc(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.radius)+DISPLAY.ystart,DISPLAY.ptSize,0,2*Math.PI);
 	    DISPLAY.animationContext.fill();
 		
@@ -75,7 +75,7 @@ let DISPLAY = {
 	},
 
     // Given a quadrant, color the quadrant and play its unique sound.
-	showFeedback: (quadrant) => {
+	showFeedback: (quadrant, isSound=true) => {
 		let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
         let soundElement = document.getElementById(audioID);
 
@@ -83,7 +83,9 @@ let DISPLAY = {
         DISPLAY.animationContext.beginPath();
         DISPLAY.animationContext.fillStyle = color;
         DISPLAY.animationContext.fillRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.radius)+DISPLAY.ystart, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
-        soundElement.play();
+        if(isSound){
+            soundElement.play();
+        }
 
 	},
 

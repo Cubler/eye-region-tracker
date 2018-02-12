@@ -6,6 +6,7 @@ let TRACKER = {
 	faceArray: [],
 	eyeBoxLength: 0,
 	faceBoxLength: 0,
+	trackingTask: null,
 
 
     myTrackerCallback: (landmarks) => {
@@ -90,13 +91,24 @@ let TRACKER = {
 
 	},
 
+	edgeDetection: () => {
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        let imageData = DISPLAY.saveContext.getImageData(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+		let edges = tracking.Image.sobel(imageData.data, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+		let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+		edgeImageData.data.set(new Uint8ClampedArray(edges));
+		DISPLAY.saveContext.putImageData(edgeImageData, 0, 0);
+		document.getElementById("saveCanvas").style.filter="invert(100%)";
+	},
+
+
 	setup: () => {
 		let tracker = new tracking.LandmarksTracker();
 		tracker.setInitialScale(4);
 		tracker.setStepSize(2);
 		tracker.setEdgesDensity(0.1);
 
-		tracking.track('#video', tracker, { camera: true });
+		TRACKER.trackingTask = tracking.track('#video', tracker, { camera: true });
 
 		tracker.on('track', function(event) {
 

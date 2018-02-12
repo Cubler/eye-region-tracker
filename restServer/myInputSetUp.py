@@ -50,7 +50,6 @@ def setUpNoSave(wholeFace, featureString):
     faceBox = np.round(features['face']).astype(int)
     faceGridPoints = features['faceGridPoints']
 
-    print(wholeFace.shape)
 	# Crop Whole Image and save
     
     leftEyePic = cropWithParams(wholeFace,leftEyeBox)

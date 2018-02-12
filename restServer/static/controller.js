@@ -20,7 +20,10 @@ let CONTROLLER = {
     // determining if predictions have been consistent.
     debouncerArray: [],
 
-    debug: false,
+    // the number of getRequests per getCenter request
+    numPtsPerCenter: 10,
+
+    debug: true,
     isCanceled: false,
 
     // Returns a promise for a server request.
@@ -131,8 +134,15 @@ let CONTROLLER = {
 	        }
 
 	        if(CONTROLLER.debug){
-            	console.log("newQuadrant: " + newQuadrant + " debouncedQuadrant: " + debouncedQuadrant);
-            	DISPLAY.drawRectPoint(newQuadrant);
+	        	let today = new Date();
+	        	let h = today.getHours();
+	        	let m = today.getMinutes();
+	        	let s = today.getSeconds();
+            	console.log("Time: " + h + ":" + m + ":" + s + 
+            		" Coords: " + coords +
+            		" newQuadrant: " + newQuadrant + 
+            		" debouncedQuadrant: " + debouncedQuadrant);
+
             }
 
 
@@ -196,13 +206,58 @@ let CONTROLLER = {
     capture: () => {
         MODEL.userSequence = [];
         CONTROLLER.isCanceled = false;
-        CONTROLLER._getUserFeedbackCoords(-1, false, -1);
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToQuadrant(coords);
+            DISPLAY.showFeedback(newQuadrant);
+        });
 
     },
 
 
+    getCenterRequests: () => {
+    	return new Promise((resolve,reject) =>{
+    		let i = 0;
+    		setTimeout(()=>{
+	    		getCenterTimeout = setInterval(()=>{
+		    		if(i < CONTROLLER.numPtsPerCenter){
+		    			let method = "GET";
+				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+				        let data = {
+				            imgBase64: DISPLAY.getPicToDataURL(),
+				            faceFeatures: TRACKER.getFormatFaceFeatures(),
+				            currentPosition: null,
+				            saveSubPath: null,
+				        };
+
+				        CONTROLLER.getRequest(method, url, data).then((coords) => {
+				        	MODEL.centerList.push(MODEL.parseCoords(coords));
+				        });
+				        i++;
+		    		}else{
+		    			clearTimeout(getCenterTimeout);
+		    			resolve();
+		    		}
+		    	}, 500);
+	    	},1000);
+    	});
+    },
+
     getCenter: () => {
-        console.log("GetCenter() not implemented now");
+    	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
+    		DISPLAY.drawRectPoint(0);
+    		CONTROLLER.getCenterRequests().then(() => {
+    			DISPLAY.showComment("All Done Finding Center");
+    		});
+    	});
     },
 
     cancelButtonMethod: () => {
@@ -250,8 +305,38 @@ let CONTROLLER = {
     	window.dispatchEvent(event);
     },
 
+    downloadPhoto: (source) => {
+    	let dataURL = DISPLAY.getPicToDataURL();
+    	source.href = dataURL;
+    	CONTROLLER.downloadFeatures(TRACKER.getFormatFaceFeatures(), "faceFeatures.json");
+    },
+    
+	stopTracking: () => {
+		TRACKER.trackingTask.stop();
+	},
+
+	startTracking: () => {
+		TRACKER.trackingTask.run();
+	},
+
     setup: () => {
     	window.addEventListener('roundComplete', CONTROLLER.roundCompleteHandler);
+
+    	CONTROLLER.downloadFeatures = (function() {
+	    	let a = document.createElement("a");
+	    	document.body.appendChild(a);
+	    	a.style = "display: none";
+
+	    	return (data, fileName) => {
+		    	let json = JSON.stringify(data),
+		        blob = new Blob([json], {type: "octet/stream"}),
+		        url = window.URL.createObjectURL(blob);
+		    	a.href = url;
+		    	a.download = fileName;
+		    	a.click();
+		    	window.URL.revokeObjectURL(url);
+			};
+	    }());
     },
 
 
