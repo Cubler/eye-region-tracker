@@ -45,7 +45,11 @@ $(document).ready(() => {
     });
 
     $('#getEdges').click(()=>{
-        TRACKER.edgeDetection();
+        DISPLAY.showEdges();
+    });
+
+    $('#getEdgeMetric').click(()=>{
+        MODEL.getEdgeMetric();
     });
 
     $(window).resize(function(){

@@ -74,6 +74,22 @@ let DISPLAY = {
 
 	},
 
+    showEdges: () => {
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        let imgData = DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        let edgeData = TRACKER.edgeDetection(imgData);
+        let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        edgeImageData.data.set(new Uint8ClampedArray(edgeData[0]));
+        DISPLAY.saveContext.putImageData(edgeImageData, 0, 0);
+        document.getElementById("saveCanvas").style.filter="invert(100%)";
+    },
+
+    showImageData: (edgeData, x, y) => {
+        let ctxImageData = DISPLAY.saveContext.createImageData(edgeData[1], edgeData[2]);
+        ctxImageData.data.set(new Uint8ClampedArray(edgeData[0]));
+        DISPLAY.saveContext.putImageData(ctxImageData, x, y);
+    },
+
     // Given a quadrant, color the quadrant and play its unique sound.
 	showFeedback: (quadrant, isSound=true) => {
 		let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
@@ -134,6 +150,7 @@ let DISPLAY = {
 
     // returns the current camera frame as a dataURL
     getPicToDataURL: () => {
+        document.getElementById("saveCanvas").style.filter="invert(0%)";
         DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');

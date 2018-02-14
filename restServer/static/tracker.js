@@ -73,6 +73,8 @@ let TRACKER = {
 	},
 
 	getFormatFaceFeatures: () => {
+        document.getElementById("saveCanvas").style.filter="invert(0%)";
+
 	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
         let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
         let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
@@ -91,14 +93,19 @@ let TRACKER = {
 
 	},
 
-	edgeDetection: () => {
+	getCropedRegion: ([x,y,eyeBoxSideWidth,eyeBoxSideHeight]) => {
+		let eyeBoxSide = eyeBoxSideWidth;
+
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imageData = DISPLAY.saveContext.getImageData(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-		let edges = tracking.Image.sobel(imageData.data, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-		let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-		edgeImageData.data.set(new Uint8ClampedArray(edges));
-		DISPLAY.saveContext.putImageData(edgeImageData, 0, 0);
-		document.getElementById("saveCanvas").style.filter="invert(100%)";
+        let imageData = DISPLAY.saveContext.getImageData(x,y, eyeBoxSide, eyeBoxSide);
+        return imageData;
+	},
+
+
+	edgeDetection: (imageData) => {
+		let edgeData = tracking.Image.sobel(imageData.data, imageData.width, imageData.height);
+		return [edgeData , imageData.width, imageData.height]
+
 	},
 
 

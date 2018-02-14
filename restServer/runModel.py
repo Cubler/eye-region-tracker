@@ -124,8 +124,6 @@ def runFast(leftEyePic, rightEyePic, facePic, faceGrid):
     net.blobs['image_face'].data[...]= transformer.preprocess('image_face',imFace)
     net.blobs['facegrid'].data[...]= transformer.preprocess('facegrid',np.reshape(np.array(faceGridData),(625,1,1)))
     s=time.time()
-
-    print('Processing...')
     out= net.forward()
     print("%0.2f, %0.2f" % (out['fc3'][0][0], out['fc3'][0][1]))
     print("Model Running Duration: %0.2f" % (time.time() - s))
