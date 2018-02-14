@@ -176,6 +176,8 @@ let MODEL = {
         DISPLAY.displayScore(MODEL.score);
     },
 
+    // Determines the average edge intensity for the eye regions that would be used for detection
+    // and shows the resulting edge detection on the saveCanvas. 
     getEdgeMetric: () => {
         let featuresString = TRACKER.getFormatFaceFeatures();
         let features = JSON.parse(featuresString);
