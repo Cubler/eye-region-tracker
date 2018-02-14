@@ -176,6 +176,36 @@ let MODEL = {
         DISPLAY.displayScore(MODEL.score);
     },
 
+    // Determines the average edge intensity for the eye regions that would be used for detection
+    // and shows the resulting edge detection on the saveCanvas. 
+    getEdgeMetric: () => {
+        let featuresString = TRACKER.getFormatFaceFeatures();
+        let features = JSON.parse(featuresString);
+        let leftEye = TRACKER.getCropedRegion(features['leftEye']);
+        let rightEye = TRACKER.getCropedRegion(features['rightEye']);
+
+        let leftEdges = TRACKER.edgeDetection(leftEye);
+        let rightEdges = TRACKER.edgeDetection(rightEye);
+
+ 		DISPLAY.showImageData(leftEdges, features['leftEye'][0], features['leftEye'][1]);
+ 		DISPLAY.showImageData(rightEdges, features['rightEye'][0], features['rightEye'][1]);
+
+        let leftAvg = MODEL.averageEdges(leftEdges);
+        let rightAvg = MODEL.averageEdges(rightEdges);
+
+        document.getElementById('edgeMetric').value = "%.2f, %.2f", (leftAvg, rightAvg);
+
+    },
+
+    // Takes a RGBA vector representing the edges,
+    // converts it to grayscale then averages the values
+    averageEdges: (edgeData) => {
+        let grayscale = tracking.Image.grayscale(edgeData[0],edgeData[1],edgeData[2],false);
+        let sum = grayscale.reduce((previous, current) => current += previous);
+        let avg = sum / grayscale.length;
+        return avg
+    },
+
 
 }
 
