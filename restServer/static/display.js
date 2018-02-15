@@ -151,8 +151,8 @@ let DISPLAY = {
     // returns the current camera frame as a dataURL
     getPicToDataURL: () => {
         document.getElementById("saveCanvas").style.filter="invert(0%)";
-        DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        // DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        // DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 

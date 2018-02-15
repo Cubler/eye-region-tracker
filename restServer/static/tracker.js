@@ -93,11 +93,9 @@ let TRACKER = {
 
 	},
 
-	getCropedRegion: ([x,y,eyeBoxSideWidth,eyeBoxSideHeight]) => {
-		let eyeBoxSide = eyeBoxSideWidth;
-
+	getCropedRegion: ([x,y,boxWidth,boxHeight]) => {
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imageData = DISPLAY.saveContext.getImageData(x,y, eyeBoxSide, eyeBoxSide);
+        let imageData = DISPLAY.saveContext.getImageData(x,y, boxWidth, boxHeight);
         return imageData;
 	},
 

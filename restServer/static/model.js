@@ -181,20 +181,32 @@ let MODEL = {
     getEdgeMetric: () => {
         let featuresString = TRACKER.getFormatFaceFeatures();
         let features = JSON.parse(featuresString);
-        let leftEye = TRACKER.getCropedRegion(features['leftEye']);
-        let rightEye = TRACKER.getCropedRegion(features['rightEye']);
+        let leftScaledFeatures = MODEL.scaleEyeBox(features['leftEye'], 1, 0.5);
+        let rightScaledFeatures = MODEL.scaleEyeBox(features['rightEye'], 1, 0.5);
+
+        let leftEye = TRACKER.getCropedRegion(leftScaledFeatures);
+        let rightEye = TRACKER.getCropedRegion(rightScaledFeatures);
 
         let leftEdges = TRACKER.edgeDetection(leftEye);
         let rightEdges = TRACKER.edgeDetection(rightEye);
 
- 		DISPLAY.showImageData(leftEdges, features['leftEye'][0], features['leftEye'][1]);
- 		DISPLAY.showImageData(rightEdges, features['rightEye'][0], features['rightEye'][1]);
+ 		DISPLAY.showImageData(leftEdges, leftScaledFeatures[0], leftScaledFeatures[1]);
+ 		DISPLAY.showImageData(rightEdges, rightScaledFeatures[0], rightScaledFeatures[1]);
 
         let leftAvg = MODEL.averageEdges(leftEdges);
         let rightAvg = MODEL.averageEdges(rightEdges);
 
-        document.getElementById('edgeMetric').value = "%.2f, %.2f", (leftAvg, rightAvg);
+        document.getElementById('edgeMetric').value = parseFloat(leftAvg).toFixed(2) +", " + parseFloat(rightAvg).toFixed(2);
+        return [leftAvg, rightAvg]
 
+    },
+
+    scaleEyeBox: ([x,y,boxWidth,boxHeight], widthFactor, heightFactor) => {
+    	let newWidth = boxWidth * widthFactor;
+    	let newHeight = boxHeight * heightFactor;
+    	let newX = (x+boxWidth/2)-newWidth/2;
+    	let newY = (y+boxHeight/2)-newHeight/2;
+    	return [newX, newY, newWidth, newHeight];
     },
 
     // Takes a RGBA vector representing the edges,
