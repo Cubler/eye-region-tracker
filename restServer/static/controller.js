@@ -307,9 +307,13 @@ let CONTROLLER = {
     },
 
     downloadPhoto: (source) => {
+    	[leftAvg, rightAvg] = MODEL.getEdgeMetric();
     	let dataURL = DISPLAY.getPicToDataURL();
     	source.href = dataURL;
-    	CONTROLLER.downloadFeatures(TRACKER.getFormatFaceFeatures(), "faceFeatures.json");
+    	let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+    	features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+    	features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+    	CONTROLLER.downloadFeatures(features, "faceFeatures.json");
     },
     
 	stopTracking: () => {
