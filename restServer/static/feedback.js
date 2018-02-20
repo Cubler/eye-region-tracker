@@ -52,6 +52,10 @@ $(document).ready(() => {
         MODEL.getEdgeMetric();
     });
 
+    $('#collectData').click(()=>{
+        CONTROLLER.collectData();
+    });
+
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
     });

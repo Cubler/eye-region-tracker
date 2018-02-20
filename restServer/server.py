@@ -18,6 +18,8 @@ import base64
 from PIL import Image
 import re
 import numpy as np 
+from skimage import exposure
+from skimage import io as imageIO 
 
 urls = (
     '/', 'index',
@@ -37,6 +39,7 @@ render = web.template.render('templetes/',)
 
 app = web.application(urls, globals())
 fileNumber = 0;
+histogramEq = False
 savePath = './myData/saveData/'
 
 
@@ -67,13 +70,9 @@ class capture:
         rawPath = './myData/rawData/'
         img = web.input().imgBase64
         encode = img[23:len(img)].decode('base64')
+        saveSubPath = int(web.input().saveSubPath)
 
-        rawSubPath = 0
-        while checkForDir(rawPath + str(rawSubPath)):
-            rawSubPath += 1
-  
-        subfolderPath = str(rawSubPath)
-        checkForDir('./myData/rawData/' + subfolderPath)
+        subfolderPath = web.ctx['ip'] + '/' + 'str(saveSubPath)
 
         fp = open('./myData/rawData/' + subfolderPath + '/wholeFace.jpg','wb')
         fp.write(encode)
@@ -86,7 +85,6 @@ class capture:
         setup = myInputSetUp.setUp(subfolderPath)
         output = runModel.run(subfolderPath)
 
-        saveSubPath = int(web.input().saveSubPath)
         currentPosition = int(web.input().currentPosition)
         file = open(savePath + web.ctx['ip'] +'/' + str(saveSubPath) + '/coordsList.txt','a+')
         file.write(str(currentPosition)+ ', ' + output+'\n')
@@ -116,7 +114,15 @@ class getCoordsFast:
         imageArray = np.array(image)[:,:,:]
 
         [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        global histogramEq        
+        if(histogramEq):
+            leftEyePic = exposure.equalize_hist(leftEyePic)
+            rightEyePic = exposure.equalize_hist(rightEyePic)
+            facePic = exposure.equalize_hist(facePic)
+            
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
+
+#        imageIO.imsave('facePic.jpg',facePic)        
 
 		# Delete data subfolder
         print("Total Fast Capture Time: %.2f" % (time.time() - startCaptureTime))

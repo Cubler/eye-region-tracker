@@ -19,12 +19,13 @@ let DISPLAY = {
     animationContext: null,
     saveContext: null,
     showTimeout: null,
-    saveWidth: 800,
-    saveHeight: 600,
+    saveWidth: 1280,
+    saveHeight: 720,
     videoWRatio: null,
     videoHRatio: null,
     scoreElement: null,
     ptSize: 15,
+    eps: 0.00001,
 
 
     // Draws the point in the corner of the appropriate quadrant.
@@ -41,6 +42,32 @@ let DISPLAY = {
 	    DISPLAY.animationContext.fill();
 		
 	},
+
+    transitionRecPoint: (prevPoint, currPoint) => {
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+
+        let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint);
+        let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint);
+        let xDiff = -(x1*xoffset-x2*xoffset)
+        let yDiff = -(y1*r-y2*r)
+        let stepRatio = 0.05
+        let currRatio = stepRatio
+
+        return new Promise((resolve, reject) => {
+            let transitionTimeout = setInterval(function(){
+                DISPLAY.animationContext.clearRect(0,0,circleContext.canvas.width, circleContext.canvas.height);
+                DISPLAY.animationContext.beginPath();
+                DISPLAY.animationContext.arc(xstart+(x1*xoffset)+xDiff*currRatio,(y1*r)+ystart+yDiff*currRatio,ptSize,0,2*Math.PI);
+                DISPLAY.animationContext.fill();
+                currRatio = currRatio + stepRatio
+                if(currRatio > 1.0+DISPLAY.eps){
+                    clearTimeout(transitionTimeout);
+                    resolve();
+                }
+            }, 75);
+        });
+
+    },
 
     // Draws the eye boxes, the face box, and the landmark point found by the face detection package.
     // [x,y]: the top left coordinate for the corresponding eye or face box
@@ -151,8 +178,8 @@ let DISPLAY = {
     // returns the current camera frame as a dataURL
     getPicToDataURL: () => {
         document.getElementById("saveCanvas").style.filter="invert(0%)";
-        // DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        // DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 

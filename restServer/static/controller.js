@@ -9,6 +9,9 @@ let CONTROLLER = {
 	// The path for the no-save coordinates request
     realTimeURL: "/getCoordsFast",
 
+    saveRequestURL: "/capture",
+    saveSubPathURL: "/start",
+
     // The change in score for a miss and a hit respectively 
     missPoints: -5,
     hitPoints: 10,
@@ -25,6 +28,8 @@ let CONTROLLER = {
 
     debug: true,
     isCanceled: false,
+
+    saveSubPath: null,
 
     // Returns a promise for a server request.
     // method: "GET" (or potentially "POST")
@@ -322,6 +327,71 @@ let CONTROLLER = {
 
 	startTracking: () => {
 		TRACKER.trackingTask.run();
+	},
+
+	collectData: () => {
+		let currentPoint = -1;
+		let previousPoint = currentPoint;
+		let revCounter = 0; 
+		CONTROLLER.setSaveSubPath().then(()=>{
+			let dataCollectionTimeout = setInterval(()=>{
+	            previousPoint = currentPoint % 5
+				currentPoint = (currentPoint +1) % 5;
+				revCounter += 1;
+				if(revCounter > (3*5)){
+					clearTimeout(dataCollectionTimeout)
+				}else{
+					DISPLAY.transitionRecPoint(previousPoint, currentPoint).then(()=>{
+						CONTROLLER.captureAtPoint(currentPoint);
+					});
+				}
+			});
+		});
+
+		
+	},
+
+	setSaveSubPath: () => {
+		let method = "GET";
+		let url = CONTROLLER.serverURL + CONTROLLER.saveSubPathURL
+		let data = {};
+		
+		return new Promise((resolve, reject) =>{
+			CONTROLLER.getRequest(method, url, data).then((subPath) => {
+				CONTROLLER.saveSubPath = subPath;
+				resolve();
+			});
+		});
+
+	},
+
+	captureAtPoint: (point) => {
+		let maxCaptures = 3;
+		let numCaptures = 0;
+		return new Promise((resolve, reject)=> {
+			let captureTimeout = setInterval(()=>{
+				if(numCaptures > maxCaptures){
+					numCaptures++;
+					let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+    	
+					let method = "GET";
+			        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
+			        let data = {
+			            imgBase64: DISPLAY.getPicToDataURL(),
+			            faceFeatures: TRACKER.getFormatFaceFeatures(),
+			            currentPosition: point,
+			            saveSubPath: CONTROLLER.saveSubPath,
+			            leftEyeMetric: parseFloat(leftAvg).toFixed(2);
+			            rightEyeMetric: parseFloat(rightAvg).toFixed(2);
+			        };
+
+			        CONTROLLER.getRequest(method, url, data).then((coords) => {
+			        });
+			    }else{
+			    	clearTimeout(captureTimeout);
+			    }
+			}, 250);
+		});
 	},
 
     setup: () => {

@@ -158,11 +158,10 @@ def setUpTransformer():
     mean_arr= caffe.io.blobproto_to_array(blob)
     transformer.set_mean('image_face', mean_arr[0])
         
-    '''
-    transformer.set_raw_scale('image_left', 255.0)
-    transformer.set_raw_scale('image_right', 255.0)
-    transformer.set_raw_scale('image_face', 255.0)
-    '''
+#    transformer.set_raw_scale('image_left', 255.0)
+#    transformer.set_raw_scale('image_right', 255.0)
+#    transformer.set_raw_scale('image_face', 255.0)
+    
 
     #Reshape input for batchsize of 1
     net.blobs['image_left'].reshape(1,3,224,224)
