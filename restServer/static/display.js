@@ -48,16 +48,16 @@ let DISPLAY = {
 
         let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint);
         let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint);
-        let xDiff = -(x1*xoffset-x2*xoffset)
-        let yDiff = -(y1*r-y2*r)
+        let xDiff = -(x1*DISPLAY.xoffset-x2*DISPLAY.xoffset)
+        let yDiff = -(y1*DISPLAY.radius-y2*DISPLAY.radius)
         let stepRatio = 0.05
         let currRatio = stepRatio
 
         return new Promise((resolve, reject) => {
             let transitionTimeout = setInterval(function(){
-                DISPLAY.animationContext.clearRect(0,0,circleContext.canvas.width, circleContext.canvas.height);
+                DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
                 DISPLAY.animationContext.beginPath();
-                DISPLAY.animationContext.arc(xstart+(x1*xoffset)+xDiff*currRatio,(y1*r)+ystart+yDiff*currRatio,ptSize,0,2*Math.PI);
+                DISPLAY.animationContext.arc(DISPLAY.xstart+(x1*DISPLAY.xoffset)+xDiff*currRatio,(y1*DISPLAY.radius)+DISPLAY.ystart+yDiff*currRatio,DISPLAY.ptSize,0,2*Math.PI);
                 DISPLAY.animationContext.fill();
                 currRatio = currRatio + stepRatio
                 if(currRatio > 1.0+DISPLAY.eps){

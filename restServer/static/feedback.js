@@ -53,6 +53,7 @@ $(document).ready(() => {
     });
 
     $('#collectData').click(()=>{
+        window.location.href='#animationCanvas'
         CONTROLLER.collectData();
     });
 

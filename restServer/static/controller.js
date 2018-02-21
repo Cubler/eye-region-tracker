@@ -9,7 +9,7 @@ let CONTROLLER = {
 	// The path for the no-save coordinates request
     realTimeURL: "/getCoordsFast",
 
-    saveRequestURL: "/capture",
+    saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
 
     // The change in score for a miss and a hit respectively 
@@ -30,6 +30,63 @@ let CONTROLLER = {
     isCanceled: false,
 
     saveSubPath: null,
+
+	captureAtPoint: (point) => {
+		let maxCaptures = 3;
+		let numCaptures = 0;
+		return new Promise((resolve, reject)=> {
+			let captureTimeout = setInterval(()=>{
+				if(numCaptures < maxCaptures){
+					numCaptures += 1;
+					let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+					let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+    				features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+    				features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+    				let featuresString = JSON.stringify(features);
+					let method = "GET";
+			        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
+			        let data = {
+			            imgBase64: DISPLAY.getPicToDataURL(),
+			            faceFeatures: featuresString,
+			            currentPosition: point,
+			            saveSubPath: CONTROLLER.saveSubPath,
+			            leftEyeMetric: parseFloat(leftAvg).toFixed(2),
+			            rightEyeMetric: parseFloat(rightAvg).toFixed(2),
+			        };
+
+			        CONTROLLER.getRequest(method, url, data).then((coords) => {
+			        });
+			    }else{
+			    	clearTimeout(captureTimeout);
+			    	resolve();
+			    }
+			}, 500);
+		});
+	},
+
+	collectData: () => {
+		let currentPoint = -1;
+		let revCounter = 0; 
+		CONTROLLER.setSaveSubPath().then(()=>{
+			CONTROLLER._collectData(currentPoint, revCounter);
+		});
+	},
+
+	_collectData: (currentPoint, revCounter) => {
+		let previousPoint = currentPoint % 5
+		currentPoint = (currentPoint +1) % 5;
+		revCounter += 1;
+		if(revCounter > (3*5)){
+			// End
+			alert("Done");
+		}else{
+			DISPLAY.transitionRecPoint(previousPoint, currentPoint).then(()=>{
+				CONTROLLER.captureAtPoint(currentPoint).then(()=>{
+					CONTROLLER._collectData(currentPoint, revCounter);
+				});
+			});
+		}
+	},
 
     // Returns a promise for a server request.
     // method: "GET" (or potentially "POST")
@@ -329,28 +386,6 @@ let CONTROLLER = {
 		TRACKER.trackingTask.run();
 	},
 
-	collectData: () => {
-		let currentPoint = -1;
-		let previousPoint = currentPoint;
-		let revCounter = 0; 
-		CONTROLLER.setSaveSubPath().then(()=>{
-			let dataCollectionTimeout = setInterval(()=>{
-	            previousPoint = currentPoint % 5
-				currentPoint = (currentPoint +1) % 5;
-				revCounter += 1;
-				if(revCounter > (3*5)){
-					clearTimeout(dataCollectionTimeout)
-				}else{
-					DISPLAY.transitionRecPoint(previousPoint, currentPoint).then(()=>{
-						CONTROLLER.captureAtPoint(currentPoint);
-					});
-				}
-			});
-		});
-
-		
-	},
-
 	setSaveSubPath: () => {
 		let method = "GET";
 		let url = CONTROLLER.serverURL + CONTROLLER.saveSubPathURL
@@ -363,35 +398,6 @@ let CONTROLLER = {
 			});
 		});
 
-	},
-
-	captureAtPoint: (point) => {
-		let maxCaptures = 3;
-		let numCaptures = 0;
-		return new Promise((resolve, reject)=> {
-			let captureTimeout = setInterval(()=>{
-				if(numCaptures > maxCaptures){
-					numCaptures++;
-					let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
-    	
-					let method = "GET";
-			        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
-			        let data = {
-			            imgBase64: DISPLAY.getPicToDataURL(),
-			            faceFeatures: TRACKER.getFormatFaceFeatures(),
-			            currentPosition: point,
-			            saveSubPath: CONTROLLER.saveSubPath,
-			            leftEyeMetric: parseFloat(leftAvg).toFixed(2);
-			            rightEyeMetric: parseFloat(rightAvg).toFixed(2);
-			        };
-
-			        CONTROLLER.getRequest(method, url, data).then((coords) => {
-			        });
-			    }else{
-			    	clearTimeout(captureTimeout);
-			    }
-			}, 250);
-		});
 	},
 
     setup: () => {
