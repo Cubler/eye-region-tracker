@@ -31,7 +31,7 @@ let CONTROLLER = {
 
     saveSubPath: null,
 
-	captureAtPoint: (point) => {
+	captureAtPoint: (point, perimeterPercent) => {
 		let maxCaptures = 3;
 		let numCaptures = 0;
 		return new Promise((resolve, reject)=> {
@@ -50,8 +50,7 @@ let CONTROLLER = {
 			            faceFeatures: featuresString,
 			            currentPosition: point,
 			            saveSubPath: CONTROLLER.saveSubPath,
-			            leftEyeMetric: parseFloat(leftAvg).toFixed(2),
-			            rightEyeMetric: parseFloat(rightAvg).toFixed(2),
+			            perimeterPercent: perimeterPercent,
 			        };
 
 			        CONTROLLER.getRequest(method, url, data).then((coords) => {
@@ -67,12 +66,13 @@ let CONTROLLER = {
 	collectData: () => {
 		let currentPoint = -1;
 		let revCounter = 0; 
+		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value/10;
 		CONTROLLER.setSaveSubPath().then(()=>{
-			CONTROLLER._collectData(currentPoint, revCounter);
+			CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
 		});
 	},
 
-	_collectData: (currentPoint, revCounter) => {
+	_collectData: (currentPoint, revCounter, perimeterPercent) => {
 		let previousPoint = currentPoint % 5
 		currentPoint = (currentPoint +1) % 5;
 		revCounter += 1;
@@ -80,9 +80,9 @@ let CONTROLLER = {
 			// End
 			alert("Done");
 		}else{
-			DISPLAY.transitionRecPoint(previousPoint, currentPoint).then(()=>{
-				CONTROLLER.captureAtPoint(currentPoint).then(()=>{
-					CONTROLLER._collectData(currentPoint, revCounter);
+			DISPLAY.transitionRecPoint(previousPoint, currentPoint, perimeterPercent).then(()=>{
+				CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+					CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
 				});
 			});
 		}

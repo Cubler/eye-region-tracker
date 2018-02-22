@@ -23,7 +23,7 @@ let MODEL = {
     //      0: center of screen
     //      1-4: algebraic quadrants
     // returns the x and y offsets from the origin for that point
-	getCanvasPointOffset: (point) => {
+	getCanvasPointOffset: (point, perimeterPercent=1) => {
 		let x = null;
 		let y = null;
 		switch(parseInt(point)){
@@ -43,7 +43,7 @@ let MODEL = {
                     y=1;
                     break; 
     	}
-		return [x,y]
+		return [x*perimeterPercent,y*perimeterPercent]
 	},
 
     // given a quadrant

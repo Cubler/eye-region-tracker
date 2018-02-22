@@ -94,8 +94,7 @@ class dataCollect:
 
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,facePic)        
        
-
-        file = open(savePath + subfolderPath + '/coordsList.txt','a+')
+        file = open(savePath + subfolderPath + '/coordsList' + web.input().perimeterPercent+ '.txt','a+')
         file.write(str(currentPosition)+ ', ' + output+'\n')
         file.close()
 		

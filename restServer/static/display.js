@@ -43,11 +43,11 @@ let DISPLAY = {
 		
 	},
 
-    transitionRecPoint: (prevPoint, currPoint) => {
+    transitionRecPoint: (prevPoint, currPoint, perimeterPercent) => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
 
-        let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint);
-        let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint);
+        let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint,perimeterPercent);
+        let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint,perimeterPercent);
         let xDiff = -(x1*DISPLAY.xoffset-x2*DISPLAY.xoffset)
         let yDiff = -(y1*DISPLAY.radius-y2*DISPLAY.radius)
         let stepRatio = 0.05
