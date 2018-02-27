@@ -53,6 +53,7 @@ def main():
     quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
     print("Quadrant Accuracy = %f" % quadrantAcc)
 
+    
     print("0th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 0))
     print("1th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 1))
     print("2th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 2))

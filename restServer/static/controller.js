@@ -66,7 +66,7 @@ let CONTROLLER = {
 	collectData: () => {
 		let currentPoint = -1;
 		let revCounter = 0; 
-		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value/10;
+		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
 		CONTROLLER.setSaveSubPath().then(()=>{
 			CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
 		});
