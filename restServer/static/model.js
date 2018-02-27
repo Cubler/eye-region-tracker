@@ -23,7 +23,7 @@ let MODEL = {
     //      0: center of screen
     //      1-4: algebraic quadrants
     // returns the x and y offsets from the origin for that point
-	getCanvasPointOffset: (point) => {
+	getCanvasPointOffset: (point, perimeterPercent=1) => {
 		let x = null;
 		let y = null;
 		switch(parseInt(point)){
@@ -43,7 +43,7 @@ let MODEL = {
                     y=1;
                     break; 
     	}
-		return [x,y]
+		return [x*perimeterPercent,y*perimeterPercent]
 	},
 
     // given a quadrant
@@ -181,8 +181,8 @@ let MODEL = {
     getEdgeMetric: () => {
         let featuresString = TRACKER.getFormatFaceFeatures();
         let features = JSON.parse(featuresString);
-        let leftScaledFeatures = MODEL.scaleEyeBox(features['leftEye'], 1, 0.5);
-        let rightScaledFeatures = MODEL.scaleEyeBox(features['rightEye'], 1, 0.5);
+        let leftScaledFeatures = MODEL.scaleEyeBox(features['leftEye'], 0.75, 0.5);
+        let rightScaledFeatures = MODEL.scaleEyeBox(features['rightEye'], 0.75, 0.5);
 
         let leftEye = TRACKER.getCropedRegion(leftScaledFeatures);
         let rightEye = TRACKER.getCropedRegion(rightScaledFeatures);

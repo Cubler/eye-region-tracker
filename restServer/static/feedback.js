@@ -52,6 +52,11 @@ $(document).ready(() => {
         MODEL.getEdgeMetric();
     });
 
+    $('#collectData').click(()=>{
+        window.location.href='#animationCanvas'
+        CONTROLLER.collectData();
+    });
+
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
     });

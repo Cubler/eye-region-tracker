@@ -15,62 +15,82 @@ circleData = []
 
 
 def main():
-	path = "CircleData"
-	if(len(sys.argv)!=1):
-		path = sys.argv[1]
+    path = "CircleData"
+    if(len(sys.argv)!=1):
+        path = sys.argv[1]
 
 	# Load and prepare all the data
-	(points, xNumpy, yNumpy) = readData(path);
+    (points, xNumpy, yNumpy) = readData(path);
+    xCentered = centerData(xNumpy)
+    yCentered = centerData(yNumpy)
 
-
-	if(len(sys.argv)>2):
-		if(sys.argv[2].lower() == "averagepoints"):
-			(xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
-		if(sys.argv[2].lower() == "nozero"):
-			(xNumpy,yNumpy,points) = cleanForZeroPoint(xNumpy,yNumpy,points)
-	if(len(sys.argv)>3):
-		if(sys.argv[3].lower() == "averagepoints"):
-			(xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
-		if(sys.argv[3].lower() == "nozero"):
-			(xNumpy,yNumpy,points) = cleanForZeroPoint(xNumpy,yNumpy,points)
-
-
-	xCentered = centerData(xNumpy)
-	yCentered = centerData(yNumpy)
+    if(len(sys.argv)>2):
+        if(sys.argv[2].lower() == "averagepoints"):
+            (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
+        if(sys.argv[2].lower() == "centerwithpoints"):
+            [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+            xCentered = xNumpy - xCenter
+            yCentered = yNumpy - yCenter
+    if(len(sys.argv)>3):
+        if(sys.argv[3].lower() == "averagepoints"):
+            (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
+        if(sys.argv[3].lower() == "centerwithpoints"):
+            [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+            xCentered = xNumpy - xCenter
+            yCentered = yNumpy - yCenter
 	
-	xMean = np.mean(xNumpy)
-	yMean = np.mean(yNumpy)
-	print("(%f,%f)" % (xMean,yMean))
+    xMean = np.mean(xNumpy)
+    yMean = np.mean(yNumpy)
+    print("Average Point: (%f,%f)" % (xMean,yMean))
+    print("Average Center Point: (%f,%f)" % getCenterCoords(xNumpy,yNumpy,points))
 
 	# Get the accuracy of a couple different quadrant comparisons
 	# All mid points (0th index points) are removed for the accuracy
-	lrAcc = getAccuracy(xCentered, yCentered, points, "lr")
-	print("Left/Right Accuracy = " + str(lrAcc))
-	tbAcc = getAccuracy(xCentered, yCentered, points, "tb")
-	print("Top/Bottom Accuracy = " + str(tbAcc))
-	quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
-	print("Quadrant Accuracy = " + str(quadrantAcc))
+    lrAcc = getAccuracy(xCentered, yCentered, points, "lr")
+    print("Left/Right Accuracy = %f" % lrAcc)
+    tbAcc = getAccuracy(xCentered, yCentered, points, "tb")
+    print("Top/Bottom Accuracy = %f" % tbAcc)
+    quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
+    print("Quadrant Accuracy = %f" % quadrantAcc)
 
+    zero = getVarianceByPoint(xNumpy, yNumpy, points, 0)
+    one = getVarianceByPoint(xNumpy, yNumpy, points, 1)
+    two = getVarianceByPoint(xNumpy, yNumpy, points, 2)
+    three = getVarianceByPoint(xNumpy, yNumpy, points, 3)
+    four = getVarianceByPoint(xNumpy, yNumpy, points, 4)
 
+    xAvg = (zero[0] + one[0] + two[0] + three[0] + four[0])/5
+    yAvg = (zero[1] + one[1] + two[1] + three[1] + four[1])/5
+    NormAvg = (zero[2] + one[2] + two[2] + three[2] + four[2])/5
+    
+    print("0th Variences, eNorm : (%f, %f), %f" % zero)
+    print("1th Variences, eNorm : (%f, %f), %f" % one)
+    print("2th Variences, eNorm : (%f, %f), %f" % two)
+    print("3th Variences, eNorm : (%f, %f), %f" % three)
+    print("4th Variences, eNorm : (%f, %f), %f" % four)
+    print("Averages:  (%f, %f), %f" % (xAvg, yAvg, NormAvg))
+    
+    drawPlot = False
+    if(drawPlot):
 	# Draw quadrants 
-	plt.plot([np.min(xCentered),np.max(xCentered)],[0,0], color='b')
-	plt.plot([0,0],[np.min(yCentered),np.max(yCentered)], color='b')
+        plt.plot([np.min(xCentered),np.max(xCentered)],[0,0], color='b')
+        plt.plot([0,0],[np.min(yCentered),np.max(yCentered)], color='b')
 
 	# Plot points and color them
-	color = points/4.0
-	cmap = cm.get_cmap()
-	plt.scatter(xCentered, yCentered, c=cmap(color))
+        color = points/4.0
+        cmap = cm.get_cmap()
+        plt.scatter(xCentered, yCentered, c=cmap(color))
 	
 	# patch0 = mpatches.Patch(color=cmap(0.0), label='PointPosition = 0')
-	patch1 = mpatches.Patch(color=cmap(.25), label='PointPosition = 1')
-	patch2 = mpatches.Patch(color=cmap(.5), label='PointPosition = 2')
-	patch3 = mpatches.Patch(color=cmap(.75), label='PointPosition = 3')
-	patch4 = mpatches.Patch(color=cmap(1.0), label='PointPosition = 4')
-	plt.legend(handles=[patch1,patch2,patch3,patch4])
-	plt.xlabel("Predicted X Coordinate")
-	plt.ylabel("Predicted Y Coordinate")
-	plt.title("Rectangle Corners Test")
-	plt.show()
+        patch1 = mpatches.Patch(color=cmap(.25), label='PointPosition = 1')
+        patch2 = mpatches.Patch(color=cmap(.5), label='PointPosition = 2')
+        patch3 = mpatches.Patch(color=cmap(.75), label='PointPosition = 3')
+        patch4 = mpatches.Patch(color=cmap(1.0), label='PointPosition = 4')
+        plt.legend(handles=[patch1,patch2,patch3,patch4])
+        plt.xlabel("Predicted X Coordinate")
+        plt.ylabel("Predicted Y Coordinate")
+        plt.title("Rectangle Corners Test")
+        plt.show()
 
 def readData(path):
 	pointList = []
@@ -95,6 +115,20 @@ def readData(path):
 		sys.exit("Data is empty")
 
 	return (np.array(pointList), np.array(xList), np.array(yList))
+
+def filterByPoint(_x, _y, _p, point):
+    zeroIndices = np.where(_p == point)
+    p = _p[zeroIndices]
+    x = _x[zeroIndices]
+    y = _y[zeroIndices]
+
+    return (x, y)
+
+
+def getCenterCoords(_x,_y,_p):
+    [x,y] = filterByPoint(_x, _y, _p, 0);    
+    return (np.mean(x), np.mean(y))
+    
 	
 def getAccuracy(_x,_y,_p, regions):
 	# regions= {"lr", "tb", "quad"} which choses what regions we want the 
@@ -241,8 +275,13 @@ def corr(t,tP):
 	denom = (np.sum((t-t.mean())**2)*np.sum((tP-tP.mean())**2))**.5
 	return numer/denom
 
-
-
+def getVarianceByPoint(_x,_y,_p,point):
+    [x,y] = filterByPoint(_x,_y,_p,point)
+    xCentered = x - np.mean(x)
+    yCentered = y - np.mean(y)
+    
+    eNorm = np.mean(np.sqrt(np.square(xCentered) + np.square(yCentered)))
+    return (np.var(x), np.var(y), eNorm)
 
 
 main()

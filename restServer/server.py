@@ -18,10 +18,12 @@ import base64
 from PIL import Image
 import re
 import numpy as np 
+from skimage import exposure
+from skimage import io as imageIO 
 
 urls = (
     '/', 'index',
-    '/capture', 'capture',
+    '/dataCollect', 'dataCollect',
     '/model', 'model',
     '/save', 'save',
     '/start', 'start',
@@ -37,6 +39,7 @@ render = web.template.render('templetes/',)
 
 app = web.application(urls, globals())
 fileNumber = 0;
+histogramEq = False
 savePath = './myData/saveData/'
 
 
@@ -61,46 +64,43 @@ class start:
 
         return subPath
 
-class capture:
+class dataCollect:
     def GET(self):
+
         startCaptureTime = time.time()
-        rawPath = './myData/rawData/'
-        img = web.input().imgBase64
-        encode = img[23:len(img)].decode('base64')
+        url = web.input().imgBase64
+        imgstr = re.search(r'base64,(.*)',url).group(1)
+        imageBytes = io.BytesIO(base64.b64decode(imgstr))
+        image = Image.open(imageBytes)
+        imageArray = np.array(image)[:,:,:]
+
+        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+            
+        output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
 
         rawSubPath = 0
-        while checkForDir(rawPath + str(rawSubPath)):
-            rawSubPath += 1
-  
-        subfolderPath = str(rawSubPath)
-        checkForDir('./myData/rawData/' + subfolderPath)
-
-        fp = open('./myData/rawData/' + subfolderPath + '/wholeFace.jpg','wb')
-        fp.write(encode)
-        fp.close()
-    
-        file = open('./myData/rawData/' + subfolderPath + '/faceFeatures.json','w+')
-        file.write(web.input().faceFeatures)
-        file.close() 
-       
-        setup = myInputSetUp.setUp(subfolderPath)
-        output = runModel.run(subfolderPath)
-
         saveSubPath = int(web.input().saveSubPath)
+        subfolderPath = web.ctx['ip'] + '/' + str(saveSubPath)
         currentPosition = int(web.input().currentPosition)
-        file = open(savePath + web.ctx['ip'] +'/' + str(saveSubPath) + '/coordsList.txt','a+')
+        
+
+        while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
+            rawSubPath += 1
+
+        if(rawSubPath < 5):
+            file = open(savePath + subfolderPath + '/' + str(rawSubPath) +  '/faceFeatures.json','w+')
+            file.write(web.input().faceFeatures)
+            file.close() 
+
+            imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,facePic)        
+       
+        file = open(savePath + subfolderPath + '/coordsList' + web.input().perimeterPercent+ '.txt','a+')
         file.write(str(currentPosition)+ ', ' + output+'\n')
         file.close()
 		
-        fp = open(savePath + web.ctx['ip'] + '/' + str(saveSubPath) + '/wholeFace.jpg','wb')
-        fp.write(encode)
-        fp.close()
-        
         print("Duration: %.3f" % (time.time() - startCaptureTime))
 
 		# Delete data subfolder
-        shutil.rmtree('./myData/rawData/'+subfolderPath)
-        shutil.rmtree('./myData/' + subfolderPath)
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
 
@@ -116,7 +116,15 @@ class getCoordsFast:
         imageArray = np.array(image)[:,:,:]
 
         [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        global histogramEq        
+        if(histogramEq):
+            leftEyePic = exposure.equalize_hist(leftEyePic)
+            rightEyePic = exposure.equalize_hist(rightEyePic)
+            facePic = exposure.equalize_hist(facePic)
+            
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
+
+#        imageIO.imsave('facePic.jpg',facePic)        
 
 		# Delete data subfolder
         print("Total Fast Capture Time: %.2f" % (time.time() - startCaptureTime))
@@ -162,6 +170,8 @@ def checkForDir(path):
             return False
     else:
         return True
+
+
 
 if __name__ == "__main__":
     app = web.application(urls, globals())
