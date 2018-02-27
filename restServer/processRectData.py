@@ -53,12 +53,22 @@ def main():
     quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
     print("Quadrant Accuracy = %f" % quadrantAcc)
 
+    zero = getVarianceByPoint(xNumpy, yNumpy, points, 0)
+    one = getVarianceByPoint(xNumpy, yNumpy, points, 1)
+    two = getVarianceByPoint(xNumpy, yNumpy, points, 2)
+    three = getVarianceByPoint(xNumpy, yNumpy, points, 3)
+    four = getVarianceByPoint(xNumpy, yNumpy, points, 4)
+
+    xAvg = (zero[0] + one[0] + two[0] + three[0] + four[0])/5
+    yAvg = (zero[1] + one[1] + two[1] + three[1] + four[1])/5
+    NormAvg = (zero[2] + one[2] + two[2] + three[2] + four[2])/5
     
-    print("0th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 0))
-    print("1th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 1))
-    print("2th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 2))
-    print("3th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 3))
-    print("4th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 4))
+    print("0th Variences, eNorm : (%f, %f), %f" % zero)
+    print("1th Variences, eNorm : (%f, %f), %f" % one)
+    print("2th Variences, eNorm : (%f, %f), %f" % two)
+    print("3th Variences, eNorm : (%f, %f), %f" % three)
+    print("4th Variences, eNorm : (%f, %f), %f" % four)
+    print("Averages:  (%f, %f), %f" % (xAvg, yAvg, NormAvg))
     
     drawPlot = False
     if(drawPlot):
