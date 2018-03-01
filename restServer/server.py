@@ -29,6 +29,7 @@ urls = (
     '/start', 'start',
     '/dataCollection', 'dataCollection',
     '/feedback', 'feedback',
+    '/eyeTrainer', 'eyeTrainer',
     '/getCoordsFast', 'getCoordsFast',
 )
 
@@ -54,6 +55,10 @@ class dataCollection:
 class feedback:
     def GET(self):
         return render.feedback(self)
+
+class eyeTrainer:
+    def GET(self):
+        return render.eyeTrainer(self)
 
 class start:
     def GET(self):

@@ -19,6 +19,8 @@ let CONTROLLER = {
     // The number of consistent quadrants for the debouncer
     debouncerLength: 2,
 
+    confirmLength: 5,
+
     // Array used to buffer the estimated quadrants when 
     // determining if predictions have been consistent.
     debouncerArray: [],
@@ -110,6 +112,7 @@ let CONTROLLER = {
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
         CONTROLLER.clearDebouncer();
+        CONTROLLER.debouncerLength = 2;
         CONTROLLER.isCanceled = false;
     	CONTROLLER._getUserFeedbackCoords(round, true, -1);
 
@@ -238,7 +241,6 @@ let CONTROLLER = {
     			return -1;
     		}
     	}
-
     },
 
     clearDebouncer: () => {
@@ -340,6 +342,101 @@ let CONTROLLER = {
         CONTROLLER.triggerRoundComplete(0);
     },
 
+    startActionSelect: () => {
+        DISPLAY.drawActionPics();
+        CONTROLLER.clearDebouncer();
+        CONTROLLER.debouncerLength = 2;
+        CONTROLLER.isCanceled = false;
+        CONTROLLER.getActionFeedback(-1);
+    },
+
+    getActionFeedback: (lastQuadrant = -1) =>{
+    	let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+        if(CONTROLLER.isCanceled){
+        	return;
+        }
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToQuadrant(coords);
+            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+            
+            if(debouncedQuadrant == -1){
+           		// Noisy feedback. Continue getting feedback.
+           		CONTROLLER.getActionFeedback();
+
+           	}else{
+	            if(lastQuadrant != debouncedQuadrant){
+	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
+	               	// if the returned quadrant is different from the current quadrant
+	                DISPLAY.selectAction(debouncedQuadrant);
+	                CONTROLLER.getActionFeedback(debouncedQuadrant);
+	                
+	            }else{
+	            	// Current quadrant is the same as the most recent quadrant
+                    CONTROLLER.getActionFeedback(debouncedQuadrant);
+	            }
+	        }
+
+	        if(CONTROLLER.debug){
+	        	let today = new Date();
+	        	let h = today.getHours();
+	        	let m = today.getMinutes();
+	        	let s = today.getSeconds();
+            	console.log("Time: " + h + ":" + m + ":" + s + 
+            		" Coords: " + coords +
+            		" newQuadrant: " + newQuadrant + 
+            		" debouncedQuadrant: " + debouncedQuadrant);
+            }
+        }, (error) => {
+            console.log(error);
+        });
+    },
+
+    getConfirm: () => {
+    	DISPLAY.drawConfirm();
+    	CONTROLLER.clearDebouncer();
+    	CONTROLLER.debouncerLength = CONTROLLER.confirmLength;
+        CONTROLLER.isCanceled = false;
+        CONTROLLER._getConfirm();
+    },
+
+    _getConfirm: () =>{
+    	DISPLAY.drawConfirm();
+
+
+    	let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+        if(CONTROLLER.isCanceled){
+        	return;
+        }
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToLeftRight(coords);
+            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+            
+            if(CONTROLLER.debouncerArray.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
+           		// Noisy feedback. Continue getting feedback.
+           		CONTROLLER._getConfirm();
+           	}else {
+				CONTROLLER.triggerDecision(debouncedQuadrant);
+           	}
+        }, (error) => {
+            console.log(error);
+        });
+    },
 
     // Handle either finishing the game if all rounds are complete or continuing to next round.
     // Event.round = round that was completed
@@ -355,15 +452,32 @@ let CONTROLLER = {
 		   		});
 		   	});
     	}else {
-    		DISPLAY.showRoundComplete();
+    		DISPLAY.showFullColor("#00FF00");
     	}
     },
+
+
 
     // Creates a custom Event that encapsulates the round that was just completed 
     // and dispatches that event.
     triggerRoundComplete: (round) => {
     	let event = new CustomEvent('roundComplete', {
     		detail: round,
+    	});
+    	window.dispatchEvent(event);
+    },
+
+    decisionHandler: (event) => {
+    	if(event.detail == 1){
+    		DISPLAY.showFullColor("#00FF00");
+    	}else if(event.detail == 2){
+    		DISPLAY.showFullColor("#FF0000");
+    	}
+    },
+
+    triggerDecision: (quadrant) => {
+		let event = new CustomEvent('decision', {
+    		detail: quadrant,
     	});
     	window.dispatchEvent(event);
     },
@@ -402,6 +516,8 @@ let CONTROLLER = {
 
     setup: () => {
     	window.addEventListener('roundComplete', CONTROLLER.roundCompleteHandler);
+    	window.addEventListener('decision', CONTROLLER.decisionHandler);
+
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");

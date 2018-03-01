@@ -19,6 +19,13 @@ let MODEL = {
     // The current score for SimonSays
     score: 0,
 
+    words: {
+        "audio1": "Not",
+        "audio2": "Go",
+        "audio3": "Like",
+        "audio4": "Want",
+    },
+
     // Given a point such that
     //      0: center of screen
     //      1-4: algebraic quadrants
@@ -108,6 +115,18 @@ let MODEL = {
         }
         return quadrant;
 	},
+
+    coordsToLeftRight: (coords) => {
+        let [x,y] = MODEL.parseCoords(coords);
+        let [xMid, yMid] = MODEL.getAvgCenter();
+        xMid = 0;
+        if(x > xMid){
+            quadrant = 1
+        }else{
+            quadrant = 2
+        }
+        return quadrant;
+    },
 
 	// Coordinate string to float array
 	// e.g. ("3.2, -5.2") => [3.2, -5.2]
