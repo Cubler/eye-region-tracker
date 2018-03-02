@@ -1,13 +1,43 @@
 let TRACKER = {
 
+	eyeBoxLength: 0,
+	faceArray: [],
+	faceBoxCorner : [0,0],
+	faceBoxLength: 0,
 	leftEyeBoxCorner : [0,0],
 	rightEyeBoxCorner : [0,0],
-	faceBoxCorner : [0,0],
-	faceArray: [],
-	eyeBoxLength: 0,
-	faceBoxLength: 0,
 	trackingTask: null,
 
+	edgeDetection: (imageData) => {
+		let edgeData = tracking.Image.sobel(imageData.data, imageData.width, imageData.height);
+		return [edgeData , imageData.width, imageData.height]
+	},
+
+	getCropedRegion: ([x,y,boxWidth,boxHeight]) => {
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        let imageData = DISPLAY.saveContext.getImageData(x,y, boxWidth, boxHeight);
+        return imageData;
+	},
+
+	getFormatFaceFeatures: () => {
+        document.getElementById("saveCanvas").style.filter="invert(0%)";
+
+	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+	    let eyeBoxSide = TRACKER.eyeBoxLength * DISPLAY.videoWRatio;
+	    let faceBoxSide = TRACKER.faceBoxLength * DISPLAY.videoWRatio;
+	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*DISPLAY.videoWRatio,x[1]*DISPLAY.videoHRatio]);
+
+	    let features = {'leftEye': [lx,ly,eyeBoxSide,eyeBoxSide],
+	                'rightEye': [rx,ry,eyeBoxSide,eyeBoxSide],
+	                'face': [fx,fy,faceBoxSide,faceBoxSide],
+	                'faceGridPoints' : faceArray
+	     	       };
+	    features = JSON.stringify(features);
+
+	    return features;
+	},
 
     myTrackerCallback: (landmarks) => {
         let leftArray = landmarks.slice(23,26);
@@ -40,71 +70,7 @@ let TRACKER = {
         TRACKER.leftEyeBoxCorner = [lxc-(TRACKER.eyeBoxLength/2), lyc-(TRACKER.eyeBoxLength/2)];
         TRACKER.faceBoxCorner = [fxc-(TRACKER.faceBoxLength/2), fyc-(TRACKER.faceBoxLength/2)];
         TRACKER.faceArray = faceArray;
-
     },
-
-    targetBoxParams: (pointsArray,feature) => {
-	       
-	    let pointsXs = pointsArray.map(x=>x[0]);
-	    let pointsYs = pointsArray.map(x=>x[1]);
-
-	    let xMin = Math.min.apply(Math, pointsXs); 
-	    let xMax = Math.max.apply(Math, pointsXs); 
-	    let yMin = Math.min.apply(Math, pointsYs);
-	    let yMax = Math.max.apply(Math, pointsYs);
-
-	    let xCenter = (xMax-xMin)/2+xMin;
-	    let yCenter = (yMax-yMin)/2+yMin;
-
-	    let w = xMax-xMin;
-	    let h = yMax-yMin;
-
-        // Adjust the scale of the box to get a better picture of the eye or face
-	    if(feature=='eye'){
-	      w = w*2.5;
-	      h = h*5; 
-	    }if(feature =='face'){
-          h = h*1;
-          yCenter = yCenter*1;
-        }
-	    
-	    return [xCenter,yCenter, w, h]
-
-	},
-
-	getFormatFaceFeatures: () => {
-        document.getElementById("saveCanvas").style.filter="invert(0%)";
-
-	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-	    let eyeBoxSide = TRACKER.eyeBoxLength * DISPLAY.videoWRatio;
-	    let faceBoxSide = TRACKER.faceBoxLength * DISPLAY.videoWRatio;
-	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*DISPLAY.videoWRatio,x[1]*DISPLAY.videoHRatio]);
-
-	    let features = {'leftEye': [lx,ly,eyeBoxSide,eyeBoxSide],
-	                'rightEye': [rx,ry,eyeBoxSide,eyeBoxSide],
-	                'face': [fx,fy,faceBoxSide,faceBoxSide],
-	                'faceGridPoints' : faceArray
-	     	       };
-	    features = JSON.stringify(features);
-
-	    return features;
-
-	},
-
-	getCropedRegion: ([x,y,boxWidth,boxHeight]) => {
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imageData = DISPLAY.saveContext.getImageData(x,y, boxWidth, boxHeight);
-        return imageData;
-	},
-
-
-	edgeDetection: (imageData) => {
-		let edgeData = tracking.Image.sobel(imageData.data, imageData.width, imageData.height);
-		return [edgeData , imageData.width, imageData.height]
-
-	},
 
 
 	setup: () => {
@@ -140,6 +106,35 @@ let TRACKER = {
 		});
 
 	},
+
+    targetBoxParams: (pointsArray,feature) => {
+	       
+	    let pointsXs = pointsArray.map(x=>x[0]);
+	    let pointsYs = pointsArray.map(x=>x[1]);
+
+	    let xMin = Math.min.apply(Math, pointsXs); 
+	    let xMax = Math.max.apply(Math, pointsXs); 
+	    let yMin = Math.min.apply(Math, pointsYs);
+	    let yMax = Math.max.apply(Math, pointsYs);
+
+	    let xCenter = (xMax-xMin)/2+xMin;
+	    let yCenter = (yMax-yMin)/2+yMin;
+
+	    let w = xMax-xMin;
+	    let h = yMax-yMin;
+
+        // Adjust the scale of the box to get a better picture of the eye or face
+	    if(feature=='eye'){
+	      w = w*2.5;
+	      h = h*5; 
+	    }if(feature =='face'){
+          h = h*1;
+          yCenter = yCenter*1;
+        }
+	    
+	    return [xCenter,yCenter, w, h]
+	},
+
 
 };
 

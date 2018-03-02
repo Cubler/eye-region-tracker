@@ -7,6 +7,9 @@ let MODEL = {
     // Optional: used to find the center of the screen for calibration 
 	centerList: [],
 
+    // The current score for SimonSays
+    score: 0,
+
     // The sequence to match for the current round of simonsays.
     // For info on how its generated, see setSequence()
 	sequence: [],
@@ -16,14 +19,53 @@ let MODEL = {
     // Used to determine how far and what is the next correct sequence.
 	userSequence: [],
 
-    // The current score for SimonSays
-    score: 0,
-
     words: {
         "audio1": "Not",
         "audio2": "Go",
         "audio3": "Like",
         "audio4": "Want",
+    },
+
+    // Takes a RGBA vector representing the edges,
+    // converts it to grayscale then averages the values
+    averageEdges: (edgeData) => {
+        let grayscale = tracking.Image.grayscale(edgeData[0],edgeData[1],edgeData[2],false);
+        let sum = grayscale.reduce((previous, current) => current += previous);
+        let avg = sum / grayscale.length;
+        return avg
+    },
+
+    // Given coordinate as a String return corresponding canvas quadrant.
+    coordsToQuadrant: (coords) => {
+        let [x,y] = MODEL.parseCoords(coords);
+        let [xMid, yMid] = MODEL.getAvgCenter();
+        xMid = 0;
+        if(x > xMid){
+            if(y > yMid){ 
+                quadrant = 1
+            }else {
+                quadrant = 4
+            }
+        }else{
+            if(y > yMid){
+                quadrant = 2
+            }else {
+                quadrant = 3
+            }
+        }
+        return quadrant;
+    },
+
+    coordsToLeftRight: (coords) => {
+        let [x,y] = MODEL.parseCoords(coords);
+        let [xMid, yMid] = MODEL.getAvgCenter();
+        xMid = 0;
+        if(x > xMid){
+            quadrant = 1
+        }else{
+            quadrant = 2
+        }
+        return quadrant;
     },
 
     // Given a point such that
@@ -52,6 +94,22 @@ let MODEL = {
     	}
 		return [x*perimeterPercent,y*perimeterPercent]
 	},
+
+    // Gets the current average coordinates for the center of screen that is recorded by getCenter(). 
+    // Used to determine the boundaries of the quadrants. Default is (0,-2)
+    getAvgCenter: () => {
+        let xTotal = 0;
+        let yTotal = 0;
+
+        if(MODEL.centerList.length == 0){
+            return [0,-2]
+        }
+        for(let i = 0; i < MODEL.centerList.length; i++){
+            xTotal +=  MODEL.centerList[i][0];
+            yTotal +=  MODEL.centerList[i][1];
+        }
+        return [xTotal/MODEL.centerList.length, yTotal/MODEL.centerList.length]
+    },
 
     // given a quadrant
 	getDisplayQuadrantInfo: (quadrant) => {
@@ -95,68 +153,36 @@ let MODEL = {
     	return [x,y,color,audioID];
 	},
 
-	// Given coordinate as a String return corresponding canvas quadrant.
-	coordsToQuadrant: (coords) => {
-        let [x,y] = MODEL.parseCoords(coords);
-        let [xMid, yMid] = MODEL.getAvgCenter();
-        xMid = 0;
-        if(x > xMid){
-            if(y > yMid){ 
-                quadrant = 1
-            }else {
-                quadrant = 4
-            }
-        }else{
-            if(y > yMid){
-                quadrant = 2
-            }else {
-                quadrant = 3
-            }
-        }
-        return quadrant;
-	},
 
-    coordsToLeftRight: (coords) => {
-        let [x,y] = MODEL.parseCoords(coords);
-        let [xMid, yMid] = MODEL.getAvgCenter();
-        xMid = 0;
-        if(x > xMid){
-            quadrant = 1
-        }else{
-            quadrant = 2
-        }
-        return quadrant;
+    // Determines the average edge intensity for the eye regions that would be used for detection
+    // and shows the resulting edge detection on the saveCanvas. 
+    getEdgeMetric: () => {
+        let featuresString = TRACKER.getFormatFaceFeatures();
+        let features = JSON.parse(featuresString);
+        let leftScaledFeatures = MODEL.scaleEyeBox(features['leftEye'], 0.75, 0.5);
+        let rightScaledFeatures = MODEL.scaleEyeBox(features['rightEye'], 0.75, 0.5);
+
+        let leftEye = TRACKER.getCropedRegion(leftScaledFeatures);
+        let rightEye = TRACKER.getCropedRegion(rightScaledFeatures);
+
+        let leftEdges = TRACKER.edgeDetection(leftEye);
+        let rightEdges = TRACKER.edgeDetection(rightEye);
+
+        DISPLAY.showImageData(leftEdges, leftScaledFeatures[0], leftScaledFeatures[1]);
+        DISPLAY.showImageData(rightEdges, rightScaledFeatures[0], rightScaledFeatures[1]);
+
+        let leftAvg = MODEL.averageEdges(leftEdges);
+        let rightAvg = MODEL.averageEdges(rightEdges);
+
+        document.getElementById('edgeMetric').value = parseFloat(leftAvg).toFixed(2) +", " + parseFloat(rightAvg).toFixed(2);
+        return [leftAvg, rightAvg]
+
     },
 
-	// Coordinate string to float array
-	// e.g. ("3.2, -5.2") => [3.2, -5.2]
-	parseCoords: (coords) => {
-        let [x,y] = coords.split(",")
-        x = parseFloat(x.trim())
-        y = parseFloat(y.trim())
-        return [x,y]
-	},
-
-	// Gets the current average coordinates for the center of screen that is recorded by getCenter(). 
-	// Used to determine the boundaries of the quadrants. Default is (0,-2)
-	getAvgCenter: () => {
-        let xTotal = 0;
-        let yTotal = 0;
-
-        if(MODEL.centerList.length == 0){
-            return [0,-2]
-        }
-        for(let i = 0; i < MODEL.centerList.length; i++){
-            xTotal +=  MODEL.centerList[i][0];
-            yTotal +=  MODEL.centerList[i][1];
-        }
-        return [xTotal/MODEL.centerList.length, yTotal/MODEL.centerList.length]
-	},
-
-	// Tests if the partialSequence is matching the primarySequence so far.
-	// Input: Two arrays
-	// e.g. primary = [1,2,3,2] partial = [1,2] returns true
-	isSequenceMatching: (primarySequence, partialSequence) => {
+    // Tests if the partialSequence is matching the primarySequence so far.
+    // Input: Two arrays
+    // e.g. primary = [1,2,3,2] partial = [1,2] returns true
+    isSequenceMatching: (primarySequence, partialSequence) => {
         if(primarySequence.length == 0){
             return true;
         }if(partialSequence.length > primarySequence.length){
@@ -168,7 +194,24 @@ let MODEL = {
                 continue;   
             }
         }return true
+    },
+
+	// Coordinate string to float array
+	// e.g. ("3.2, -5.2") => [3.2, -5.2]
+	parseCoords: (coords) => {
+        let [x,y] = coords.split(",")
+        x = parseFloat(x.trim())
+        y = parseFloat(y.trim())
+        return [x,y]
 	},
+
+    scaleEyeBox: ([x,y,boxWidth,boxHeight], widthFactor, heightFactor) => {
+        let newWidth = boxWidth * widthFactor;
+        let newHeight = boxHeight * heightFactor;
+        let newX = (x+boxWidth/2)-newWidth/2;
+        let newY = (y+boxHeight/2)-newHeight/2;
+        return [newX, newY, newWidth, newHeight];
+    },
 
     // given the desired sequence length, generate and set the current sequence 
     // such that subsequent quadrants are either one clockwise or counter-clockwise
@@ -194,49 +237,6 @@ let MODEL = {
         MODEL.score += scoreChange;
         DISPLAY.displayScore(MODEL.score);
     },
-
-    // Determines the average edge intensity for the eye regions that would be used for detection
-    // and shows the resulting edge detection on the saveCanvas. 
-    getEdgeMetric: () => {
-        let featuresString = TRACKER.getFormatFaceFeatures();
-        let features = JSON.parse(featuresString);
-        let leftScaledFeatures = MODEL.scaleEyeBox(features['leftEye'], 0.75, 0.5);
-        let rightScaledFeatures = MODEL.scaleEyeBox(features['rightEye'], 0.75, 0.5);
-
-        let leftEye = TRACKER.getCropedRegion(leftScaledFeatures);
-        let rightEye = TRACKER.getCropedRegion(rightScaledFeatures);
-
-        let leftEdges = TRACKER.edgeDetection(leftEye);
-        let rightEdges = TRACKER.edgeDetection(rightEye);
-
- 		DISPLAY.showImageData(leftEdges, leftScaledFeatures[0], leftScaledFeatures[1]);
- 		DISPLAY.showImageData(rightEdges, rightScaledFeatures[0], rightScaledFeatures[1]);
-
-        let leftAvg = MODEL.averageEdges(leftEdges);
-        let rightAvg = MODEL.averageEdges(rightEdges);
-
-        document.getElementById('edgeMetric').value = parseFloat(leftAvg).toFixed(2) +", " + parseFloat(rightAvg).toFixed(2);
-        return [leftAvg, rightAvg]
-
-    },
-
-    scaleEyeBox: ([x,y,boxWidth,boxHeight], widthFactor, heightFactor) => {
-    	let newWidth = boxWidth * widthFactor;
-    	let newHeight = boxHeight * heightFactor;
-    	let newX = (x+boxWidth/2)-newWidth/2;
-    	let newY = (y+boxHeight/2)-newHeight/2;
-    	return [newX, newY, newWidth, newHeight];
-    },
-
-    // Takes a RGBA vector representing the edges,
-    // converts it to grayscale then averages the values
-    averageEdges: (edgeData) => {
-        let grayscale = tracking.Image.grayscale(edgeData[0],edgeData[1],edgeData[2],false);
-        let sum = grayscale.reduce((previous, current) => current += previous);
-        let avg = sum / grayscale.length;
-        return avg
-    },
-
 
 }
 
