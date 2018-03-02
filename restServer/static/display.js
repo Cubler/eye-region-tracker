@@ -13,7 +13,7 @@ let DISPLAY = {
 	canvasOffset: null,
 	xoffset: null,
 	xstart: null,
-	radius: null,
+	yoffset: null,
 	ystart: null,
     videoContext: null,
     animationContext: null,
@@ -26,6 +26,7 @@ let DISPLAY = {
     scoreElement: null,
     ptSize: 15,
     eps: 0.00001,
+    scalePics: 1.75,
 
 
     // Draws the point in the corner of the appropriate quadrant.
@@ -38,7 +39,7 @@ let DISPLAY = {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
         DISPLAY.animationContext.fillStyle = "#000000";
-        DISPLAY.animationContext.arc(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.radius)+DISPLAY.ystart,DISPLAY.ptSize,0,2*Math.PI);
+        DISPLAY.animationContext.arc(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.yoffset)+DISPLAY.ystart,DISPLAY.ptSize,0,2*Math.PI);
 	    DISPLAY.animationContext.fill();
 		
 	},
@@ -49,7 +50,7 @@ let DISPLAY = {
         let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint,perimeterPercent);
         let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint,perimeterPercent);
         let xDiff = -(x1*DISPLAY.xoffset-x2*DISPLAY.xoffset)
-        let yDiff = -(y1*DISPLAY.radius-y2*DISPLAY.radius)
+        let yDiff = -(y1*DISPLAY.yoffset-y2*DISPLAY.yoffset)
         let stepRatio = 0.05
         let currRatio = stepRatio
 
@@ -57,7 +58,7 @@ let DISPLAY = {
             let transitionTimeout = setInterval(function(){
                 DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
                 DISPLAY.animationContext.beginPath();
-                DISPLAY.animationContext.arc(DISPLAY.xstart+(x1*DISPLAY.xoffset)+xDiff*currRatio,(y1*DISPLAY.radius)+DISPLAY.ystart+yDiff*currRatio,DISPLAY.ptSize,0,2*Math.PI);
+                DISPLAY.animationContext.arc(DISPLAY.xstart+(x1*DISPLAY.xoffset)+xDiff*currRatio,(y1*DISPLAY.yoffset)+DISPLAY.ystart+yDiff*currRatio,DISPLAY.ptSize,0,2*Math.PI);
                 DISPLAY.animationContext.fill();
                 currRatio = currRatio + stepRatio
                 if(currRatio > 1.0+DISPLAY.eps){
@@ -93,11 +94,11 @@ let DISPLAY = {
 		DISPLAY.offset = window.innerWidth * 0.02;
 		DISPLAY.xoffset = (window.innerWidth-50)/2-DISPLAY.offset;
    		DISPLAY.xstart = (window.innerWidth-50)/2;
-	    DISPLAY.radius = window.innerHeight*0.4;
-		DISPLAY.ystart = DISPLAY.radius + DISPLAY.offset;
+	    DISPLAY.yoffset = window.innerHeight*0.4;
+		DISPLAY.ystart = DISPLAY.yoffset + DISPLAY.offset;
 
         DISPLAY.animationContext.canvas.width = window.innerWidth-50;
-        DISPLAY.animationContext.canvas.height = 2*DISPLAY.radius+2*DISPLAY.offset;
+        DISPLAY.animationContext.canvas.height = 2*DISPLAY.yoffset+2*DISPLAY.offset;
 
 	},
 
@@ -125,12 +126,48 @@ let DISPLAY = {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
         DISPLAY.animationContext.fillStyle = color;
-        DISPLAY.animationContext.fillRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.radius)+DISPLAY.ystart, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
+        DISPLAY.animationContext.fillRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.yoffset)+DISPLAY.ystart, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
         if(isSound){
             soundElement.play();
         }
 
 	},
+
+    drawActionPics: () => {
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+
+        DISPLAY.animationContext.drawImage(DISPLAY.goPic,0,0,DISPLAY.goPic.width*DISPLAY.scalePics, DISPLAY.goPic.height*DISPLAY.scalePics);
+        
+        DISPLAY.animationContext.drawImage(DISPLAY.notPic,DISPLAY.animationContext.canvas.width-(DISPLAY.notPic.width*DISPLAY.scalePics),0,
+            DISPLAY.notPic.width*DISPLAY.scalePics, DISPLAY.notPic.height*DISPLAY.scalePics);
+        
+        DISPLAY.animationContext.drawImage(DISPLAY.likePic,0,DISPLAY.animationContext.canvas.height - (DISPLAY.likePic.height*DISPLAY.scalePics),
+            DISPLAY.likePic.width*DISPLAY.scalePics, DISPLAY.likePic.height*DISPLAY.scalePics);
+        
+        DISPLAY.animationContext.drawImage(DISPLAY.wantPic,
+            DISPLAY.animationContext.canvas.width - (DISPLAY.wantPic.width*DISPLAY.scalePics),
+            DISPLAY.animationContext.canvas.height - (DISPLAY.wantPic.height*DISPLAY.scalePics),
+            DISPLAY.wantPic.width*DISPLAY.scalePics, DISPLAY.wantPic.height*DISPLAY.scalePics);
+    },
+
+    selectAction: (quadrant) => {
+        DISPLAY.drawActionPics();
+        let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant, "action");
+        DISPLAY.animationContext.strokeRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.yoffset)+DISPLAY.ystart,
+            DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
+
+        let msg = new SpeechSynthesisUtterance(MODEL.words[audioID]);
+        window.speechSynthesis.speak(msg);
+    },
+
+    drawConfirm: () => {
+        DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
+        DISPLAY.animationContext.beginPath();
+        DISPLAY.animationContext.fillStyle = "#FF0000";
+        DISPLAY.animationContext.fillRect(0,0, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height);
+        DISPLAY.animationContext.fillStyle = "#00FF00";
+        DISPLAY.animationContext.fillRect(DISPLAY.xoffset,0, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height);
+    },
 
     // Return a promise that resolves when the the animation for the given sequence
     // has finished. The animation consists of showing the unique feedback for each 
@@ -170,6 +207,12 @@ let DISPLAY = {
         });
     },
 
+    showCommentAt: (comment, x, y) => {
+        DISPLAY.animationContext.fillStyle = "#000000";
+        DISPLAY.animationContext.font = "80px Georgia";
+        DISPLAY.animationContext.fillText(comment, DISPLAY.xstart+(x*DISPLAY.xoffset), (y*DISPLAY.yoffset)+DISPLAY.ystart);
+    },
+
     // Writes the provided sequence into the sequence element so the current sequence is viewable to users.
     showSequenceText: (sequence) => {
         document.getElementById('sequence').value = sequence.toString();
@@ -190,10 +233,10 @@ let DISPLAY = {
     },
 
     // Displays the animation canvas as all green
-    showRoundComplete: () => {
+    showFullColor: (color) => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
-        DISPLAY.animationContext.fillStyle = "#00FF00";
+        DISPLAY.animationContext.fillStyle = color;
         DISPLAY.animationContext.fillRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         
     },
@@ -218,6 +261,15 @@ let DISPLAY = {
         DISPLAY.videoHRatio = DISPLAY.saveVideo.clientHeight/DISPLAY.video.clientHeight;
         
         DISPLAY.resizeCanvas();
+
+        DISPLAY.goPic = new Image();
+        DISPLAY.goPic.src = "./static/privatePics/go.png";
+        DISPLAY.likePic = new Image();
+        DISPLAY.likePic.src = "./static/privatePics/like.png";
+        DISPLAY.notPic = new Image();
+        DISPLAY.notPic.src = "./static/privatePics/not.png";
+        DISPLAY.wantPic = new Image();
+        DISPLAY.wantPic.src = "./static/privatePics/want.png";
     },
 
 
