@@ -3,8 +3,26 @@
 
 let CONTROLLER = {
 
-	// The server URL to send requests to
-	serverURL: "https://localhost:3000",
+	// Length of the debouncer sequence needed for the confirm decision
+    confirmLength: 5,
+
+    // Array used to buffer the estimated quadrants when 
+    // determining if predictions have been consistent.
+    debouncerArray: [],
+
+    // The number of consistent quadrants for the debouncer
+    debouncerLength: 2,
+
+    debug: true,
+
+    isCanceled: false,
+
+    // The change in score for a miss and a hit respectively 
+    missPoints: -5,
+    hitPoints: 10,
+
+    // the number of getRequests per getCenter request
+    numPtsPerCenter: 10,
 
 	// The path for the no-save coordinates request
     realTimeURL: "/getCoordsFast",
@@ -12,26 +30,34 @@ let CONTROLLER = {
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
 
-    // The change in score for a miss and a hit respectively 
-    missPoints: -5,
-    hitPoints: 10,
-
-    // The number of consistent quadrants for the debouncer
-    debouncerLength: 2,
-
-    confirmLength: 5,
-
-    // Array used to buffer the estimated quadrants when 
-    // determining if predictions have been consistent.
-    debouncerArray: [],
-
-    // the number of getRequests per getCenter request
-    numPtsPerCenter: 10,
-
-    debug: true,
-    isCanceled: false,
-
     saveSubPath: null,
+
+	// The server URL to send requests to
+	serverURL: "https://localhost:3000",
+
+
+    cancelButtonMethod: () => {
+        CONTROLLER.isCanceled = true;
+    },
+
+    // Preforms a one time request to get and show coordinates from the server.
+    capture: () => {
+        MODEL.userSequence = [];
+        CONTROLLER.isCanceled = false;
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToQuadrant(coords);
+            DISPLAY.showFeedback(newQuadrant);
+        });
+    },
 
 	captureAtPoint: (point, perimeterPercent) => {
 		let maxCaptures = 3;
@@ -65,6 +91,18 @@ let CONTROLLER = {
 		});
 	},
 
+    checkConsistent: (quadrant) =>{
+    	if(CONTROLLER.debouncerArray.length == 0){
+    		throw "debouncerArray has no length. Should not have been called yet."
+    	}else{
+    		return quadrant == CONTROLLER.debouncerArray[0];
+    	}
+    },
+
+    clearDebouncer: () => {
+    	CONTROLLER.debouncerArray = [];
+    },
+
 	collectData: () => {
 		let currentPoint = -1;
 		let revCounter = 0; 
@@ -89,6 +127,180 @@ let CONTROLLER = {
 			});
 		}
 	},
+
+    // Denoises random inaccurate estimates by requiring debouncerLength number of
+    // constant readings before allowing a change in the state.
+    // Returns the corresponding consistent quadrant or -1 if not consistent 
+    debounce: (newQuadrant) => {
+    	if(CONTROLLER.debouncerArray.length == 0){
+    		CONTROLLER.debouncerArray.push(newQuadrant);
+    		return newQuadrant;
+    	}
+    	if(CONTROLLER.debouncerArray.length < (CONTROLLER.debouncerLength-1)){
+    		// Not enough data to determine consistency
+    		CONTROLLER.debouncerArray.push(newQuadrant);
+    		return -1;
+    	}else{
+    		if(CONTROLLER.debouncerArray.length == CONTROLLER.debouncerLength){
+    			CONTROLLER.debouncerArray = CONTROLLER.shiftArray(CONTROLLER.debouncerArray, -1);
+    		}
+    		CONTROLLER.debouncerArray.push(newQuadrant);
+    		if(CONTROLLER.debouncerArray.every(CONTROLLER.checkConsistent)){
+    			return newQuadrant;
+    		}else{
+    			// Noisy Array
+    			return -1;
+    		}
+    	}
+    },
+
+    decisionHandler: (event) => {
+    	if(event.detail == 1){
+    		DISPLAY.showFullColor("#00FF00");
+    	}else if(event.detail == 2){
+    		DISPLAY.showFullColor("#FF0000");
+    	}
+    },
+
+    downloadPhoto: (source) => {
+    	[leftAvg, rightAvg] = MODEL.getEdgeMetric();
+    	let dataURL = DISPLAY.getPicToDataURL();
+    	source.href = dataURL;
+    	let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+    	features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+    	features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+    	CONTROLLER.downloadFeatures(features, "faceFeatures.json");
+    },
+
+    getActionFeedback: (lastQuadrant = -1) =>{
+    	let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+        if(CONTROLLER.isCanceled){
+        	return;
+        }
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToQuadrant(coords);
+            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+            
+            if(debouncedQuadrant == -1){
+           		// Noisy feedback. Continue getting feedback.
+           		CONTROLLER.getActionFeedback();
+
+           	}else{
+	            if(lastQuadrant != debouncedQuadrant){
+	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
+	               	// if the returned quadrant is different from the current quadrant
+	                DISPLAY.selectAction(debouncedQuadrant);
+	                CONTROLLER.getActionFeedback(debouncedQuadrant);
+	                
+	            }else{
+	            	// Current quadrant is the same as the most recent quadrant
+                    CONTROLLER.getActionFeedback(debouncedQuadrant);
+	            }
+	        }
+
+	        if(CONTROLLER.debug){
+	        	let today = new Date();
+	        	let h = today.getHours();
+	        	let m = today.getMinutes();
+	        	let s = today.getSeconds();
+            	console.log("Time: " + h + ":" + m + ":" + s + 
+            		" Coords: " + coords +
+            		" newQuadrant: " + newQuadrant + 
+            		" debouncedQuadrant: " + debouncedQuadrant);
+            }
+        }, (error) => {
+            console.log(error);
+        });
+    },
+
+    getCenter: () => {
+    	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
+    		DISPLAY.drawRectPoint(0);
+    		CONTROLLER.getCenterRequests().then(() => {
+    			DISPLAY.showComment("All Done Finding Center");
+    		});
+    	});
+    },
+
+    getCenterRequests: () => {
+    	return new Promise((resolve,reject) =>{
+    		let i = 0;
+    		setTimeout(()=>{
+	    		getCenterTimeout = setInterval(()=>{
+		    		if(i < CONTROLLER.numPtsPerCenter){
+		    			let method = "GET";
+				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+				        let data = {
+				            imgBase64: DISPLAY.getPicToDataURL(),
+				            faceFeatures: TRACKER.getFormatFaceFeatures(),
+				            currentPosition: null,
+				            saveSubPath: null,
+				        };
+
+				        CONTROLLER.getRequest(method, url, data).then((coords) => {
+				        	MODEL.centerList.push(MODEL.parseCoords(coords));
+				        });
+				        i++;
+		    		}else{
+		    			clearTimeout(getCenterTimeout);
+		    			resolve();
+		    		}
+		    	}, 500);
+	    	},1000);
+    	});
+    },
+
+    getConfirm: () => {
+    	DISPLAY.drawConfirm();
+    	CONTROLLER.clearDebouncer();
+    	CONTROLLER.debouncerLength = CONTROLLER.confirmLength;
+        CONTROLLER.isCanceled = false;
+        CONTROLLER._getConfirm();
+    },
+
+    _getConfirm: () =>{
+    	DISPLAY.drawConfirm();
+
+    	let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: TRACKER.getFormatFaceFeatures(),
+            currentPosition: null,
+            saveSubPath: null,
+        };
+        if(CONTROLLER.isCanceled){
+        	return;
+        }
+
+        CONTROLLER.getRequest(method, url, data).then((coords) => {
+            let newQuadrant = MODEL.coordsToLeftRight(coords);
+            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+            
+            if(CONTROLLER.debouncerArray.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
+           		// Noisy feedback. Continue getting feedback.
+           		CONTROLLER._getConfirm();
+           	}else {
+				CONTROLLER.triggerDecision(debouncedQuadrant);
+           	}
+        }, (error) => {
+            console.log(error);
+        });
+    },
+
+    // Sets a new sequence with the sequence length coming from the user input.
+    getNewSequence: () => {
+        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+        MODEL.setNewSequence(maxSeqLen);
+    },
 
     // Returns a promise for a server request.
     // method: "GET" (or potentially "POST")
@@ -115,8 +327,6 @@ let CONTROLLER = {
         CONTROLLER.debouncerLength = 2;
         CONTROLLER.isCanceled = false;
     	CONTROLLER._getUserFeedbackCoords(round, true, -1);
-
-
     },
 
     // Helper function for the UserFeedback session that determines the next step in the UserFeedback session.  
@@ -207,235 +417,11 @@ let CONTROLLER = {
             		" Coords: " + coords +
             		" newQuadrant: " + newQuadrant + 
             		" debouncedQuadrant: " + debouncedQuadrant);
-
-            }
-
-
-        }, (error) => {
-            console.log(error);
-        });
-
-    },
-
-    // Denoises random inaccurate estimates by requiring debouncerLength number of
-    // constant readings before allowing a change in the state.
-    // Returns the corresponding consistent quadrant or -1 if not consistent 
-    debounce: (newQuadrant) => {
-    	if(CONTROLLER.debouncerArray.length == 0){
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		return newQuadrant;
-    	}
-    	if(CONTROLLER.debouncerArray.length < (CONTROLLER.debouncerLength-1)){
-    		// Not enough data to determine consistency
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		return -1;
-    	}else{
-    		if(CONTROLLER.debouncerArray.length == CONTROLLER.debouncerLength){
-    			CONTROLLER.debouncerArray = CONTROLLER.shiftArray(CONTROLLER.debouncerArray, -1);
-    		}
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		if(CONTROLLER.debouncerArray.every(CONTROLLER.checkConsistent)){
-    			return newQuadrant;
-    		}else{
-    			// Noisy Array
-    			return -1;
-    		}
-    	}
-    },
-
-    clearDebouncer: () => {
-    	CONTROLLER.debouncerArray = [];
-    },
-
-    // Shifts the array by the shift amount. Negative numbers mean
-    // shift left. e.g. array = [1,2,3,4], shiftAmount = -1
-    // returned: shiftedArray=[2,3,4]
-    shiftArray: (array, shiftAmount) => {
-    	shiftedArray = [];
-    	for(let i=0; i < (array.length-Math.abs(shiftAmount)); i++){
-    		shiftedArray.push(array[i-shiftAmount]);
-    	}
-    	return shiftedArray
-    },
-
-    checkConsistent: (quadrant) =>{
-    	if(CONTROLLER.debouncerArray.length == 0){
-    		throw "debouncerArray has no length. Should not have been called yet."
-    	}else{
-    		return quadrant == CONTROLLER.debouncerArray[0];
-    	}
-    },
-
-    // Preforms a one time request to get and show coordinates from the server.
-    capture: () => {
-        MODEL.userSequence = [];
-        CONTROLLER.isCanceled = false;
-        let method = "GET";
-        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
-        let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
-            faceFeatures: TRACKER.getFormatFaceFeatures(),
-            currentPosition: null,
-            saveSubPath: null,
-        };
-
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToQuadrant(coords);
-            DISPLAY.showFeedback(newQuadrant);
-        });
-
-    },
-
-
-    getCenterRequests: () => {
-    	return new Promise((resolve,reject) =>{
-    		let i = 0;
-    		setTimeout(()=>{
-	    		getCenterTimeout = setInterval(()=>{
-		    		if(i < CONTROLLER.numPtsPerCenter){
-		    			let method = "GET";
-				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
-				        let data = {
-				            imgBase64: DISPLAY.getPicToDataURL(),
-				            faceFeatures: TRACKER.getFormatFaceFeatures(),
-				            currentPosition: null,
-				            saveSubPath: null,
-				        };
-
-				        CONTROLLER.getRequest(method, url, data).then((coords) => {
-				        	MODEL.centerList.push(MODEL.parseCoords(coords));
-				        });
-				        i++;
-		    		}else{
-		    			clearTimeout(getCenterTimeout);
-		    			resolve();
-		    		}
-		    	}, 500);
-	    	},1000);
-    	});
-    },
-
-
-    getCenter: () => {
-    	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
-    		DISPLAY.drawRectPoint(0);
-    		CONTROLLER.getCenterRequests().then(() => {
-    			DISPLAY.showComment("All Done Finding Center");
-    		});
-    	});
-    },
-
-    cancelButtonMethod: () => {
-        CONTROLLER.isCanceled = true;
-    },
-
-    // Sets a new sequence with the sequence length coming from the user input.
-    getNewSequence: () => {
-        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
-        MODEL.setNewSequence(maxSeqLen);
-    },
-
-    // Called when the user decides to start the game. Starts a new SimonSays game
-    startSimonSays: () => {
-        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
-        MODEL.setNewSequence(maxSeqLen);
-        CONTROLLER.triggerRoundComplete(0);
-    },
-
-    startActionSelect: () => {
-        DISPLAY.drawActionPics();
-        CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 2;
-        CONTROLLER.isCanceled = false;
-        CONTROLLER.getActionFeedback(-1);
-    },
-
-    getActionFeedback: (lastQuadrant = -1) =>{
-    	let method = "GET";
-        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
-        let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
-            faceFeatures: TRACKER.getFormatFaceFeatures(),
-            currentPosition: null,
-            saveSubPath: null,
-        };
-        if(CONTROLLER.isCanceled){
-        	return;
-        }
-
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToQuadrant(coords);
-            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
-            
-            if(debouncedQuadrant == -1){
-           		// Noisy feedback. Continue getting feedback.
-           		CONTROLLER.getActionFeedback();
-
-           	}else{
-	            if(lastQuadrant != debouncedQuadrant){
-	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
-	               	// if the returned quadrant is different from the current quadrant
-	                DISPLAY.selectAction(debouncedQuadrant);
-	                CONTROLLER.getActionFeedback(debouncedQuadrant);
-	                
-	            }else{
-	            	// Current quadrant is the same as the most recent quadrant
-                    CONTROLLER.getActionFeedback(debouncedQuadrant);
-	            }
-	        }
-
-	        if(CONTROLLER.debug){
-	        	let today = new Date();
-	        	let h = today.getHours();
-	        	let m = today.getMinutes();
-	        	let s = today.getSeconds();
-            	console.log("Time: " + h + ":" + m + ":" + s + 
-            		" Coords: " + coords +
-            		" newQuadrant: " + newQuadrant + 
-            		" debouncedQuadrant: " + debouncedQuadrant);
             }
         }, (error) => {
             console.log(error);
         });
-    },
 
-    getConfirm: () => {
-    	DISPLAY.drawConfirm();
-    	CONTROLLER.clearDebouncer();
-    	CONTROLLER.debouncerLength = CONTROLLER.confirmLength;
-        CONTROLLER.isCanceled = false;
-        CONTROLLER._getConfirm();
-    },
-
-    _getConfirm: () =>{
-    	DISPLAY.drawConfirm();
-
-
-    	let method = "GET";
-        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
-        let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
-            faceFeatures: TRACKER.getFormatFaceFeatures(),
-            currentPosition: null,
-            saveSubPath: null,
-        };
-        if(CONTROLLER.isCanceled){
-        	return;
-        }
-
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToLeftRight(coords);
-            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
-            
-            if(CONTROLLER.debouncerArray.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
-           		// Noisy feedback. Continue getting feedback.
-           		CONTROLLER._getConfirm();
-           	}else {
-				CONTROLLER.triggerDecision(debouncedQuadrant);
-           	}
-        }, (error) => {
-            console.log(error);
-        });
     },
 
     // Handle either finishing the game if all rounds are complete or continuing to next round.
@@ -456,50 +442,6 @@ let CONTROLLER = {
     	}
     },
 
-
-
-    // Creates a custom Event that encapsulates the round that was just completed 
-    // and dispatches that event.
-    triggerRoundComplete: (round) => {
-    	let event = new CustomEvent('roundComplete', {
-    		detail: round,
-    	});
-    	window.dispatchEvent(event);
-    },
-
-    decisionHandler: (event) => {
-    	if(event.detail == 1){
-    		DISPLAY.showFullColor("#00FF00");
-    	}else if(event.detail == 2){
-    		DISPLAY.showFullColor("#FF0000");
-    	}
-    },
-
-    triggerDecision: (quadrant) => {
-		let event = new CustomEvent('decision', {
-    		detail: quadrant,
-    	});
-    	window.dispatchEvent(event);
-    },
-
-    downloadPhoto: (source) => {
-    	[leftAvg, rightAvg] = MODEL.getEdgeMetric();
-    	let dataURL = DISPLAY.getPicToDataURL();
-    	source.href = dataURL;
-    	let features = JSON.parse(TRACKER.getFormatFaceFeatures());
-    	features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
-    	features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
-    	CONTROLLER.downloadFeatures(features, "faceFeatures.json");
-    },
-    
-	stopTracking: () => {
-		TRACKER.trackingTask.stop();
-	},
-
-	startTracking: () => {
-		TRACKER.trackingTask.run();
-	},
-
 	setSaveSubPath: () => {
 		let method = "GET";
 		let url = CONTROLLER.serverURL + CONTROLLER.saveSubPathURL
@@ -511,13 +453,11 @@ let CONTROLLER = {
 				resolve();
 			});
 		});
-
 	},
 
     setup: () => {
     	window.addEventListener('roundComplete', CONTROLLER.roundCompleteHandler);
     	window.addEventListener('decision', CONTROLLER.decisionHandler);
-
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");
@@ -536,8 +476,55 @@ let CONTROLLER = {
 	    }());
     },
 
+    // Shifts the array by the shift amount. Negative numbers mean
+    // shift left. e.g. array = [1,2,3,4], shiftAmount = -1
+    // returned: shiftedArray=[2,3,4]
+    shiftArray: (array, shiftAmount) => {
+    	shiftedArray = [];
+    	for(let i=0; i < (array.length-Math.abs(shiftAmount)); i++){
+    		shiftedArray.push(array[i-shiftAmount]);
+    	}
+    	return shiftedArray
+    },
 
+    startActionSelect: () => {
+        DISPLAY.drawActionPics();
+        CONTROLLER.clearDebouncer();
+        CONTROLLER.debouncerLength = 2;
+        CONTROLLER.isCanceled = false;
+        CONTROLLER.getActionFeedback(-1);
+    },
 
+	startTracking: () => {
+		TRACKER.trackingTask.run();
+	},
+
+	stopTracking: () => {
+		TRACKER.trackingTask.stop();
+	},
+
+    // Called when the user decides to start the game. Starts a new SimonSays game
+    startSimonSays: () => {
+        let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
+        MODEL.setNewSequence(maxSeqLen);
+        CONTROLLER.triggerRoundComplete(0);
+    },
+
+    // Creates a custom Event that encapsulates the round that was just completed 
+    // and dispatches that event.
+    triggerRoundComplete: (round) => {
+    	let event = new CustomEvent('roundComplete', {
+    		detail: round,
+    	});
+    	window.dispatchEvent(event);
+    },
+
+    triggerDecision: (quadrant) => {
+		let event = new CustomEvent('decision', {
+    		detail: quadrant,
+    	});
+    	window.dispatchEvent(event);
+    },
 } 
 
 $(document).ready(() => {
