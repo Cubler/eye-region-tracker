@@ -146,6 +146,13 @@ let DISPLAY = {
         DISPLAY.animationContext.fillText(comment, DISPLAY.xstart+(x*DISPLAY.xoffset), (y*DISPLAY.yoffset)+DISPLAY.ystart);
     },
 
+    showDebounceProgress: () => {
+        let count = CONTROLLER.getDebounceProgress(CONTROLLER.debouncerArray);
+        let quadrant = CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
+        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.75);
+        DISPLAY.showCommentAt(count,x,y);
+    },
+
     showEdges: () => {
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         let imgData = DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);

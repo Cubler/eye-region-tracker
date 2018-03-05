@@ -95,7 +95,7 @@ let CONTROLLER = {
     	if(CONTROLLER.debouncerArray.length == 0){
     		throw "debouncerArray has no length. Should not have been called yet."
     	}else{
-    		return quadrant == CONTROLLER.debouncerArray[0];
+    		return quadrant == CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
     	}
     },
 
@@ -136,14 +136,12 @@ let CONTROLLER = {
     		CONTROLLER.debouncerArray.push(newQuadrant);
     		return newQuadrant;
     	}
-    	if(CONTROLLER.debouncerArray.length < (CONTROLLER.debouncerLength-1)){
+    	if(CONTROLLER.debouncerArray.length < (CONTROLLER.debouncerLength)){
     		// Not enough data to determine consistency
     		CONTROLLER.debouncerArray.push(newQuadrant);
     		return -1;
     	}else{
-    		if(CONTROLLER.debouncerArray.length == CONTROLLER.debouncerLength){
-    			CONTROLLER.debouncerArray = CONTROLLER.shiftArray(CONTROLLER.debouncerArray, -1);
-    		}
+			CONTROLLER.debouncerArray = CONTROLLER.shiftArray(CONTROLLER.debouncerArray, -1);
     		CONTROLLER.debouncerArray.push(newQuadrant);
     		if(CONTROLLER.debouncerArray.every(CONTROLLER.checkConsistent)){
     			return newQuadrant;
@@ -188,11 +186,11 @@ let CONTROLLER = {
         CONTROLLER.getRequest(method, url, data).then((coords) => {
             let newQuadrant = MODEL.coordsToQuadrant(coords);
             let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
-            
             if(debouncedQuadrant == -1){
            		// Noisy feedback. Continue getting feedback.
+	      		DISPLAY.drawActionPics();
+				DISPLAY.showDebounceProgress();
            		CONTROLLER.getActionFeedback();
-
            	}else{
 	            if(lastQuadrant != debouncedQuadrant){
 	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
@@ -296,6 +294,14 @@ let CONTROLLER = {
         });
     },
 
+    getDebounceProgress: (array) => {
+    	let count = array.map(CONTROLLER.checkConsistent).lastIndexOf(false);
+    	if(count == -1){
+    		return array.length
+    	}else {
+    		return CONTROLLER.debouncerLength-(count+1);
+    	}
+    },
     // Sets a new sequence with the sequence length coming from the user input.
     getNewSequence: () => {
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
@@ -490,7 +496,7 @@ let CONTROLLER = {
     startActionSelect: () => {
         DISPLAY.drawActionPics();
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 2;
+        CONTROLLER.debouncerLength = 3;
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },
