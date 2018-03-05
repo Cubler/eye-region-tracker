@@ -59,5 +59,4 @@ $(document).ready(() => {
 
     DISPLAY.drawActionPics();
 
-
 });
