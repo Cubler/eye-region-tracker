@@ -87,7 +87,7 @@ class dataCollect:
         saveSubPath = int(web.input().saveSubPath)
         subfolderPath = web.ctx['ip'] + '/' + str(saveSubPath)
         currentPosition = int(web.input().currentPosition)
-        
+        features = json.loads(web.input().faceFeatures)
 
         while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
             rawSubPath += 1
@@ -99,8 +99,15 @@ class dataCollect:
 
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,facePic)        
        
-        file = open(savePath + subfolderPath + '/coordsList' + web.input().perimeterPercent+ '.txt','a+')
-        file.write(str(currentPosition)+ ', ' + output+'\n')
+        file = open(savePath + subfolderPath + '/coordsList.txt','a+')
+        saveData = {
+            "currentPosition" : str(currentPosition),
+            "coords" : output,
+            "perimeterPercent" : web.input().perimeterPercent,
+            "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "isRingLight" : web.input().isRingLight,
+            }
+        file.write(json.dumps(saveData) + '\n')
         file.close()
 		
         print("Duration: %.3f" % (time.time() - startCaptureTime))

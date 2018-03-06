@@ -13,18 +13,21 @@ let TRACKER = {
 		return [edgeData , imageData.width, imageData.height]
 	},
 
+	// Returns the imageData object of the desired box on the saveCanvas
 	getCropedRegion: ([x,y,boxWidth,boxHeight]) => {
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         let imageData = DISPLAY.saveContext.getImageData(x,y, boxWidth, boxHeight);
         return imageData;
 	},
 
+	// Maps the points saved from the detection canvas to the corresponding points on the saveCanvas
+	// and formats them into a JSON String
 	getFormatFaceFeatures: () => {
         document.getElementById("saveCanvas").style.filter="invert(0%)";
 
 	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.rightEyeBoxCorner[1]*DISPLAY.videoHRatio];
+        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.faceBoxCorner[1]*DISPLAY.videoHRatio];
 	    let eyeBoxSide = TRACKER.eyeBoxLength * DISPLAY.videoWRatio;
 	    let faceBoxSide = TRACKER.faceBoxLength * DISPLAY.videoWRatio;
 	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*DISPLAY.videoWRatio,x[1]*DISPLAY.videoHRatio]);
@@ -55,6 +58,7 @@ let TRACKER = {
         }
     },
 
+    // sets the feature box variables with respect to the detection canvas
     setFeatureBoxes: (leftArray, rightArray, faceArray) => {
     	let [lxc,lyc,lw,lh] = TRACKER.targetBoxParams(leftArray,'eye');
         let [rxc,ryc,rw,rh] = TRACKER.targetBoxParams(rightArray,'eye');
@@ -107,6 +111,8 @@ let TRACKER = {
 
 	},
 
+	// Given the 2-D points array from the face feature detection, 
+	// returns the centerPoint, length, and width of the closest fitting box
     targetBoxParams: (pointsArray,feature) => {
 	       
 	    let pointsXs = pointsArray.map(x=>x[0]);

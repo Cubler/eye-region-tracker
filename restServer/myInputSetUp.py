@@ -9,6 +9,7 @@ from scipy import misc
 import PIL
 
 maxsize = (224,224)
+isWholeFace = True
 
 def setUp(subfolderPath):
 	# for numOfPics: since we are ignoring photo (0) we get +1 num of photos we are going to prcess and therefore this works for range(start,<) 
@@ -50,8 +51,16 @@ def setUpNoSave(wholeFace, featureString):
     faceBox = np.round(features['face']).astype(int)
     faceGridPoints = features['faceGridPoints']
 
+    global isWholeFace	
+    if(not isWholeFace):
+    	leftEyeBox[0] -= faceBox[0]
+    	leftEyeBox[1] -= faceBox[1]
+    	rightEyeBox[0] -= faceBox[0]
+    	rightEyeBox[1] -= faceBox[1]
+    	faceBox[0] = 0
+    	faceBox[1] = 0
+
 	# Crop Whole Image and save
-    
     leftEyePic = cropWithParams(wholeFace,leftEyeBox)
     rightEyePic = cropWithParams(wholeFace,rightEyeBox)
     wholeFacePic = cropWithParams(wholeFace,faceBox)
@@ -73,11 +82,16 @@ def cropWithParams(image,box):
     return image[y:yend,x:xend,:]
 	
 def checkForDir(path):
-	if not os.path.exists(path):
-		try:
-			os.makedirs(path)
-		except Exception as e:
-			print(e.message)	
+    if(not os.path.exists(path)):
+        try:
+            os.makedirs(path)
+            return False
+        except Exception as e:
+            print(e.message)
+            return False
+    else:
+        return True
+	
 
 # Creates the flat grid map from faceBox and face feature points
 def createFaceGridFromFeatures(wholeFace, faceBox, fgpts):
@@ -118,6 +132,25 @@ def createFaceGridFromFaceBox(wholeFace, faceBox, fgpts):
 			faceGridParams[i]=1
 	return faceGridParams
 
+def main():
+	savePath = './myData/'
+	saveSubPath = 0
+	imgPath = sys.argv[1]
+	featuresPath = sys.argv[2]
+
+	global isWholeFace
+	isWholeFace = False
+
+	features = json.load(open(featuresPath))
+	wholeFace = misc.imread(imgPath)
+	[leftEyePic, rightEyePic, wholeFacePic, faceGridParams] = setUpNoSave(wholeFace,json.dumps(features))
+
+	while checkForDir(savePath + str(saveSubPath)):
+		saveSubPath = saveSubPath + 1
+
+	misc.imsave(savePath + str(saveSubPath) + '/rightEye.jpg', rightEyePic)
+	misc.imsave(savePath + str(saveSubPath) + '/leftEye.jpg', leftEyePic)
+	misc.imsave(savePath + str(saveSubPath) + '/face.jpg', wholeFacePic)
 
 
 

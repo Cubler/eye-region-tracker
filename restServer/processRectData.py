@@ -20,7 +20,8 @@ def main():
         path = sys.argv[1]
 
 	# Load and prepare all the data
-    (points, xNumpy, yNumpy) = readData(path);
+    (points, xNumpy, yNumpy, perimeterPercentNumpy, \
+    	eyeMetricNumpy, isRingLightNumpy) = readData(path);
     xCentered = centerData(xNumpy)
     yCentered = centerData(yNumpy)
 
@@ -53,22 +54,12 @@ def main():
     quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
     print("Quadrant Accuracy = %f" % quadrantAcc)
 
-    zero = getVarianceByPoint(xNumpy, yNumpy, points, 0)
-    one = getVarianceByPoint(xNumpy, yNumpy, points, 1)
-    two = getVarianceByPoint(xNumpy, yNumpy, points, 2)
-    three = getVarianceByPoint(xNumpy, yNumpy, points, 3)
-    four = getVarianceByPoint(xNumpy, yNumpy, points, 4)
-
-    xAvg = (zero[0] + one[0] + two[0] + three[0] + four[0])/5
-    yAvg = (zero[1] + one[1] + two[1] + three[1] + four[1])/5
-    NormAvg = (zero[2] + one[2] + two[2] + three[2] + four[2])/5
     
-    print("0th Variences, eNorm : (%f, %f), %f" % zero)
-    print("1th Variences, eNorm : (%f, %f), %f" % one)
-    print("2th Variences, eNorm : (%f, %f), %f" % two)
-    print("3th Variences, eNorm : (%f, %f), %f" % three)
-    print("4th Variences, eNorm : (%f, %f), %f" % four)
-    print("Averages:  (%f, %f), %f" % (xAvg, yAvg, NormAvg))
+    print("0th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 0))
+    print("1th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 1))
+    print("2th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 2))
+    print("3th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 3))
+    print("4th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 4))
     
     drawPlot = False
     if(drawPlot):
@@ -96,6 +87,10 @@ def readData(path):
 	pointList = []
 	xList = []
 	yList = []
+	perimeterPercentList = []
+	eyeMetricList = []
+	isRingLightList = []
+
 	
 	try: 
 		data = json.load(open(path))
@@ -105,16 +100,33 @@ def readData(path):
 	for line in data:
 		if(line.strip()[0]=='#'):
 			continue
-		(point,x,y) = line.replace(',','').replace('\n','').split(" ")
+		try:
+			entryJSON = json.loads(line);
+			(x,y) = coordsToXY(entryJSON['coords'])
+			point = float(entryJSON['currentPosition'])
+			perimeterPercent = float(entryJSON['perimeterPercent'])
+			eyeMetric = [float(entryJSON['eyeMetric'][0]),float(entryJSON['eyeMetric'][1])]
+			isRingLight = entryJSON['isRingLight'] == 'true'
 
-		pointList.append(float(point))
-		xList.append(float(x))
-		yList.append(float(y))
+			pointList.append(point)
+			xList.append(x)
+			yList.append(y)
+			perimeterPercentList.append(perimeterPercent)
+			eyeMetricList.append(eyeMetric)
+			isRingLightList.append(isRingLight)
+		except:
+			(point,x,y) = line.replace(',','').replace('\n','').split(" ")
+			(point,x,y) = (float(point), float(x), float(y))
+
+			pointList.append(point)
+			xList.append(x)
+			yList.append(y)
 
 	if(len(pointList) == 0):
 		sys.exit("Data is empty")
 
-	return (np.array(pointList), np.array(xList), np.array(yList))
+	return (np.array(pointList), np.array(xList), np.array(yList), \
+			np.array(perimeterPercentList), np.array(eyeMetricList), np.array(isRingLightList))
 
 def filterByPoint(_x, _y, _p, point):
     zeroIndices = np.where(_p == point)
@@ -124,6 +136,9 @@ def filterByPoint(_x, _y, _p, point):
 
     return (x, y)
 
+def coordsToXY(coords):
+	(x, y) = coords.replace(',','').replace('\n','').split(" ")
+	return (float(x), float(y))
 
 def getCenterCoords(_x,_y,_p):
     [x,y] = filterByPoint(_x, _y, _p, 0);    
