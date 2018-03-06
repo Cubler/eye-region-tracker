@@ -496,7 +496,7 @@ let CONTROLLER = {
     startActionSelect: () => {
         DISPLAY.drawActionPics();
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 3;
+        CONTROLLER.debouncerLength = 4;
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },
