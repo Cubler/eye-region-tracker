@@ -97,7 +97,7 @@ class dataCollect:
             file.write(web.input().faceFeatures)
             file.close() 
 
-            imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,facePic)        
+            imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
        
         file = open(savePath + subfolderPath + '/coordsList.txt','a+')
         saveData = {

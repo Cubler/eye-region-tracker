@@ -139,7 +139,7 @@ def main():
 	featuresPath = sys.argv[2]
 
 	global isWholeFace
-	isWholeFace = False
+	isWholeFace = True
 
 	features = json.load(open(featuresPath))
 	wholeFace = misc.imread(imgPath)
