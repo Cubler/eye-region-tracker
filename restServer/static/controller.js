@@ -32,6 +32,8 @@ let CONTROLLER = {
     saveSubPathURL: "/start",
 
     saveSubPath: null,
+    saveFullSubPath: null,
+    saveRoundNum: 0,
 
 	// The server URL to send requests to
 	serverURL: "https://localhost:3000",
@@ -78,7 +80,7 @@ let CONTROLLER = {
 			            imgBase64: DISPLAY.getPicToDataURL(),
 			            faceFeatures: featuresString,
 			            currentPosition: point,
-			            saveSubPath: CONTROLLER.saveSubPath,
+			            saveSubPath: CONTROLLER.saveFullSubPath,
 			            perimeterPercent: perimeterPercent,
 			            isRingLight: CONTROLLER.isRingLight,
 			        };
@@ -111,9 +113,13 @@ let CONTROLLER = {
 		let revCounter = 0; 
 		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
 	
-		CONTROLLER.setSaveSubPath().then(()=>{
-			CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-		});
+		if(CONTROLLER.saveSubPath == null){
+			CONTROLLER.setSaveSubPath().then(()=>{
+				CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+			});
+		}else{
+			CONTROLLER.incrementFullSubPath();
+		}
 	},
 
 	_collectData: (currentPoint, revCounter, perimeterPercent) => {
@@ -434,6 +440,12 @@ let CONTROLLER = {
 
     },
 
+	incrementFullSubPath: () => {
+		CONTROLLER.saveRoundNum += 1;
+		CONTROLLER.saveFullSubPath = CONTROLLER.saveSubPath + '/' + 
+			CONTROLLER.saveRoundNum;
+	},
+
     // Handle either finishing the game if all rounds are complete or continuing to next round.
     // Event.round = round that was completed
     roundCompleteHandler: (event) => {
@@ -460,6 +472,9 @@ let CONTROLLER = {
 		return new Promise((resolve, reject) =>{
 			CONTROLLER.getRequest(method, url, data).then((subPath) => {
 				CONTROLLER.saveSubPath = subPath;
+				CONTROLLER.saveRoundNum = 0;
+				CONTROLLER.saveFullSubPath = CONTROLLER.saveSubPath + '/' + 
+					CONTROLLER.saveRoundNum;
 				resolve();
 			});
 		});
@@ -535,6 +550,7 @@ let CONTROLLER = {
     	});
     	window.dispatchEvent(event);
     },
+
 } 
 
 $(document).ready(() => {

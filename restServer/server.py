@@ -84,8 +84,7 @@ class dataCollect:
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
 
         rawSubPath = 0
-        saveSubPath = int(web.input().saveSubPath)
-        subfolderPath = web.ctx['ip'] + '/' + str(saveSubPath)
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveSubPath
         currentPosition = int(web.input().currentPosition)
         features = json.loads(web.input().faceFeatures)
 
