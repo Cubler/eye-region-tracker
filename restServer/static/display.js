@@ -27,8 +27,7 @@ let DISPLAY = {
     xstart: null,
     yoffset: null,
     ystart: null,
-
-
+    
     // Writes the score parameter in the score html element so it is displayed on the page.
     displayScore: (score) => {
         DISPLAY.scoreElement.value = score;
@@ -118,9 +117,16 @@ let DISPLAY = {
 
     selectAction: (quadrant) => {
         DISPLAY.drawActionPics();
-        let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant, "action");
-        DISPLAY.animationContext.strokeRect(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.yoffset)+DISPLAY.ystart,
-            DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height/2);
+        let [x,y,pic, audioID] = DISPLAY.quadToPic[quadrant];
+        let picWidth = pic.width*DISPLAY.scalePics;
+        let picHeight = pic.height*DISPLAY.scalePics;
+
+        let xPicOffset = DISPLAY.animationContext.canvas.width-picWidth;
+        let yPicOffset = DISPLAY.animationContext.canvas.height-picHeight;
+
+        DISPLAY.animationContext.lineWidth = 10; 
+
+        DISPLAY.animationContext.strokeRect(x*xPicOffset, y*yPicOffset, picWidth, picHeight);
 
         let msg = new SpeechSynthesisUtterance(MODEL.words[audioID]);
         window.speechSynthesis.speak(msg);
@@ -149,7 +155,7 @@ let DISPLAY = {
     showDebounceProgress: () => {
         let count = CONTROLLER.getDebounceProgress(CONTROLLER.debouncerArray);
         let quadrant = CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
-        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.75);
+        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.9);
         DISPLAY.showCommentAt(count,x,y);
     },
 
@@ -250,6 +256,13 @@ let DISPLAY = {
         DISPLAY.notPic.src = "./static/privatePics/not.png";
         DISPLAY.wantPic = new Image();
         DISPLAY.wantPic.src = "./static/privatePics/want.png";
+
+        DISPLAY.quadToPic = {
+            1: [1, 0, DISPLAY.notPic, "audio1"],
+            2: [0, 0, DISPLAY.goPic, "audio2"],
+            3: [0, 1, DISPLAY.likePic, "audio3"],
+            4: [1, 1, DISPLAY.wantPic, "audio4"],
+        }
     },
 
     transitionRecPoint: (prevPoint, currPoint, perimeterPercent) => {

@@ -60,4 +60,5 @@ $(document).ready(() => {
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
     });
+
 });

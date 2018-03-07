@@ -84,10 +84,9 @@ class dataCollect:
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
 
         rawSubPath = 0
-        saveSubPath = int(web.input().saveSubPath)
-        subfolderPath = web.ctx['ip'] + '/' + str(saveSubPath)
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveSubPath
         currentPosition = int(web.input().currentPosition)
-        
+        features = json.loads(web.input().faceFeatures)
 
         while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
             rawSubPath += 1
@@ -97,10 +96,17 @@ class dataCollect:
             file.write(web.input().faceFeatures)
             file.close() 
 
-            imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,facePic)        
+            imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
        
-        file = open(savePath + subfolderPath + '/coordsList' + web.input().perimeterPercent+ '.txt','a+')
-        file.write(str(currentPosition)+ ', ' + output+'\n')
+        file = open(savePath + subfolderPath + '/coordsList.txt','a+')
+        saveData = {
+            "currentPosition" : str(currentPosition),
+            "coords" : output,
+            "perimeterPercent" : web.input().perimeterPercent,
+            "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "isRingLight" : web.input().isRingLight,
+            }
+        file.write(json.dumps(saveData) + '\n')
         file.close()
 		
         print("Duration: %.3f" % (time.time() - startCaptureTime))

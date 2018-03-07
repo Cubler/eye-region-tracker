@@ -16,6 +16,7 @@ let CONTROLLER = {
     debug: true,
 
     isCanceled: false,
+    isRingLight: false,
 
     // The change in score for a miss and a hit respectively 
     missPoints: -5,
@@ -31,6 +32,8 @@ let CONTROLLER = {
     saveSubPathURL: "/start",
 
     saveSubPath: null,
+    saveFullSubPath: null,
+    saveRoundNum: 0,
 
 	// The server URL to send requests to
 	serverURL: "https://localhost:3000",
@@ -77,8 +80,9 @@ let CONTROLLER = {
 			            imgBase64: DISPLAY.getPicToDataURL(),
 			            faceFeatures: featuresString,
 			            currentPosition: point,
-			            saveSubPath: CONTROLLER.saveSubPath,
+			            saveSubPath: CONTROLLER.saveFullSubPath,
 			            perimeterPercent: perimeterPercent,
+			            isRingLight: CONTROLLER.isRingLight,
 			        };
 
 			        CONTROLLER.getRequest(method, url, data).then((coords) => {
@@ -104,12 +108,18 @@ let CONTROLLER = {
     },
 
 	collectData: () => {
+		CONTROLLER.isRingLight = confirm("Are you using a ring light?");
 		let currentPoint = -1;
 		let revCounter = 0; 
 		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
-		CONTROLLER.setSaveSubPath().then(()=>{
-			CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-		});
+	
+		if(CONTROLLER.saveSubPath == null){
+			CONTROLLER.setSaveSubPath().then(()=>{
+				CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+			});
+		}else{
+			CONTROLLER.incrementFullSubPath();
+		}
 	},
 
 	_collectData: (currentPoint, revCounter, perimeterPercent) => {
@@ -430,6 +440,12 @@ let CONTROLLER = {
 
     },
 
+	incrementFullSubPath: () => {
+		CONTROLLER.saveRoundNum += 1;
+		CONTROLLER.saveFullSubPath = CONTROLLER.saveSubPath + '/' + 
+			CONTROLLER.saveRoundNum;
+	},
+
     // Handle either finishing the game if all rounds are complete or continuing to next round.
     // Event.round = round that was completed
     roundCompleteHandler: (event) => {
@@ -456,6 +472,9 @@ let CONTROLLER = {
 		return new Promise((resolve, reject) =>{
 			CONTROLLER.getRequest(method, url, data).then((subPath) => {
 				CONTROLLER.saveSubPath = subPath;
+				CONTROLLER.saveRoundNum = 0;
+				CONTROLLER.saveFullSubPath = CONTROLLER.saveSubPath + '/' + 
+					CONTROLLER.saveRoundNum;
 				resolve();
 			});
 		});
@@ -496,7 +515,7 @@ let CONTROLLER = {
     startActionSelect: () => {
         DISPLAY.drawActionPics();
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 3;
+        CONTROLLER.debouncerLength = 4;
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },
@@ -531,6 +550,7 @@ let CONTROLLER = {
     	});
     	window.dispatchEvent(event);
     },
+
 } 
 
 $(document).ready(() => {
