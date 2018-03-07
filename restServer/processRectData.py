@@ -6,18 +6,21 @@ import math
 import matplotlib.patches as mpatches
 import sys
 import json
+import os
 
 from mpl_toolkits.mplot3d import Axes3D
 
-
 removeZerothPts = True
 circleData = []
+dataFileName = "coordsList.txt"
+reportFileName = "coordReport.txt"
 
 
-def main():
-    path = "CircleData"
-    if(len(sys.argv)!=1):
-        path = sys.argv[1]
+def main(path, averagepoints = False, centerwithpoints = True ):
+    # path = "CircleData"
+    # if(len(sys.argv)!=1):
+    #     path = sys.argv[1]
+
 
 	# Load and prepare all the data
     (points, xNumpy, yNumpy, perimeterPercentNumpy, \
@@ -25,20 +28,27 @@ def main():
     xCentered = centerData(xNumpy)
     yCentered = centerData(yNumpy)
 
-    if(len(sys.argv)>2):
-        if(sys.argv[2].lower() == "averagepoints"):
-            (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
-        if(sys.argv[2].lower() == "centerwithpoints"):
-            [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
-            xCentered = xNumpy - xCenter
-            yCentered = yNumpy - yCenter
-    if(len(sys.argv)>3):
-        if(sys.argv[3].lower() == "averagepoints"):
-            (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
-        if(sys.argv[3].lower() == "centerwithpoints"):
-            [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
-            xCentered = xNumpy - xCenter
-            yCentered = yNumpy - yCenter
+    if(averagepoints):
+        (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
+    if(centerwithpoints):
+        [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+        xCentered = xNumpy - xCenter
+        yCentered = yNumpy - yCenter
+
+    # if(len(sys.argv)>2):
+    #     if(sys.argv[2].lower() == "averagepoints"):
+    #         (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
+    #     if(sys.argv[2].lower() == "centerwithpoints"):
+    #         [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+    #         xCentered = xNumpy - xCenter
+    #         yCentered = yNumpy - yCenter
+    # if(len(sys.argv)>3):
+    #     if(sys.argv[3].lower() == "averagepoints"):
+    #         (xNumpy,yNumpy,points) = averagePoints(xNumpy,yNumpy,points)		
+    #     if(sys.argv[3].lower() == "centerwithpoints"):
+    #         [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+    #         xCentered = xNumpy - xCenter
+    #         yCentered = yNumpy - yCenter
 	
     xMean = np.mean(xNumpy)
     yMean = np.mean(yNumpy)
@@ -55,13 +65,13 @@ def main():
     print("Quadrant Accuracy = %f" % quadrantAcc)
 
     
-    print("0th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 0))
-    print("1th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 1))
-    print("2th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 2))
-    print("3th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 3))
-    print("4th Variences, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 4))
+    print("0th variances, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 0))
+    print("1th variances, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 1))
+    print("2th variances, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 2))
+    print("3th variances, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 3))
+    print("4th variances, eNorm : (%f, %f), %f" % getVarianceByPoint(xNumpy, yNumpy, points, 4))
     
-    drawPlot = False
+    drawPlot = True
     if(drawPlot):
 	# Draw quadrants 
         plt.plot([np.min(xCentered),np.max(xCentered)],[0,0], color='b')
@@ -82,6 +92,8 @@ def main():
         plt.ylabel("Predicted Y Coordinate")
         plt.title("Rectangle Corners Test")
         plt.show()
+
+    return 
 
 def readData(path):
 	pointList = []
@@ -288,7 +300,10 @@ def corr(t,tP):
 	tP=np.array(tP)
 	numer = np.sum((t-t.mean())*(tP-tP.mean()))
 	denom = (np.sum((t-t.mean())**2)*np.sum((tP-tP.mean())**2))**.5
-	return numer/denom
+	if(denom == 0):
+		return 0
+	else:
+		return numer/denom
 
 def getVarianceByPoint(_x,_y,_p,point):
     [x,y] = filterByPoint(_x,_y,_p,point)
@@ -298,5 +313,107 @@ def getVarianceByPoint(_x,_y,_p,point):
     eNorm = np.mean(np.sqrt(np.square(xCentered) + np.square(yCentered)))
     return (np.var(x), np.var(y), eNorm)
 
+def makeReport(path):
+	accuracyEdgeMetricReport(path,'')
 
-main()
+def accuracyEdgeMetricReport(path, subpath):
+	global dataFileName
+	currentPath = path + subpath
+	if(dataFileName in os.listdir(currentPath)):
+		saveDataString = accuracyForFile(currentPath + '/' +  dataFileName)
+		file = open(path + '/' + reportFileName, 'a+')
+		file.write(saveDataString + '\n')
+		file.close()
+	else: 
+		for nextPath in os.listdir(currentPath):
+			accuracyEdgeMetricReport(path,subpath+'/'+nextPath)
+
+def isPartialDataFileName(fileNames):
+	for fileName in fileNames:
+		if(".txt" in fileName):
+			return fileName
+	return -1
+
+def accuracyForFile(filePath):
+    (points, xNumpy, yNumpy, perimeterPercentNumpy, eyeMetricNumpy, isRingLightNumpy) = readData(filePath);
+    [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
+    xCentered = xNumpy - xCenter
+    yCentered = yNumpy - yCenter
+
+    lrAcc = getAccuracy(xCentered, yCentered, points, "lr")
+    tbAcc = getAccuracy(xCentered, yCentered, points, "tb")
+    quadrantAcc = getAccuracy(xCentered, yCentered, points, "quad")
+    
+    if(len(isRingLightNumpy)==0):
+    	isRingLightValue = "null"
+    else:
+    	isRingLightValue = 1 if isRingLightNumpy[0] else 0
+    if(len(perimeterPercentNumpy) == 0):
+    	perimeterPercentValue = "null"
+    else:
+    	perimeterPercentValue = perimeterPercentNumpy[0]
+    if(len(eyeMetricNumpy) == 0):
+    	eyeMetricAverageValue = "null"
+    else:
+    	xAvgMetric = np.mean([x[0] for x in eyeMetricNumpy])
+    	yAvgMetric = np.mean([x[1] for x in eyeMetricNumpy])
+    	eyeMetricAverageValue = [xAvgMetric, yAvgMetric]
+    	
+    eNorms = []
+    variances = []
+    for i in range(0,5):
+    	[xVar, yVar, enorm] = getVarianceByPoint(xNumpy, yNumpy, points, i)
+    	eNorms.append(enorm);
+    	variances.append([xVar, yVar])
+
+    saveData = {
+        "path" : filePath,
+        "lrAccuracy" : lrAcc,
+        "tbAccuracy" : tbAcc,
+        "quadrantAccuracy" : quadrantAcc,
+        "isRingLight" : isRingLightValue,
+        "perimeterPercent" : perimeterPercentValue,
+        "eyeMetricAverage" : eyeMetricAverageValue,
+        "centerCoord" : [xCenter, yCenter],
+        "eNorms" : eNorms,
+        "variances" : variances,
+    }
+
+    return json.dumps(saveData)
+
+def plotFromReport(reportPath, xLabel, yLabel):
+
+	[xList, yList] = readReport(reportPath, xLabel, yLabel)
+	
+	try:
+		correlation = corr(xList, yList)
+		print("Correlation between %s and %s: %d" % (xLabel, yLabel, correlation))
+	except Exception as e:
+		# print(e)
+		print("Quantitative values needed for Correlation")
+
+	plt.scatter(xList, yList)
+	plt.xlabel(xLabel)
+	plt.ylabel(yLabel)
+	plt.show()
+
+def readReport(reportPath, xLabel, yLabel):
+	data = open(reportPath,"r")
+	xList = []
+	yList = []
+
+	for line in data:
+		entryJSON = json.loads(line);
+		xEntry = entryJSON[xLabel]
+		yEntry = entryJSON[yLabel]
+		if(isinstance(xEntry, list)):
+			xEntry = np.mean(np.array(xEntry))
+		if(isinstance(yEntry, list)):
+			yEntry = np.mean(np.array(yEntry))
+		xList.append(xEntry)
+		yList.append(yEntry)
+
+	return (xList, yList)
+
+# main(sys.argv[1:len(sys.argv)])
+

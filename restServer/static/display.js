@@ -155,7 +155,7 @@ let DISPLAY = {
     showDebounceProgress: () => {
         let count = CONTROLLER.getDebounceProgress(CONTROLLER.debouncerArray);
         let quadrant = CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
-        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.75);
+        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.9);
         DISPLAY.showCommentAt(count,x,y);
     },
 
