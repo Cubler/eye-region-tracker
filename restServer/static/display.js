@@ -103,6 +103,11 @@ let DISPLAY = {
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
     },
 
+    getSaveCanvasImageData: () => {
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        return DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+    },
+
     // resizes the animation canvas so that it fills the window and is independent of browser.
 	resizeCanvas: () => {
 		DISPLAY.offset = window.innerWidth * 0.02;
@@ -160,8 +165,8 @@ let DISPLAY = {
     },
 
     showEdges: () => {
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imgData = DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        
+        let imgData = DISPLAY.getSaveCanvasImageData();
         let edgeData = TRACKER.edgeDetection(imgData);
         let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         edgeImageData.data.set(new Uint8ClampedArray(edgeData[0]));

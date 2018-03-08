@@ -16,7 +16,7 @@ let CONTROLLER = {
     debug: true,
 
     isCanceled: false,
-    isRingLight: false,
+    isRingLight: 0,
 
     // The change in score for a miss and a hit respectively 
     missPoints: -5,
@@ -82,7 +82,8 @@ let CONTROLLER = {
 			            currentPosition: point,
 			            saveSubPath: CONTROLLER.saveFullSubPath,
 			            perimeterPercent: perimeterPercent,
-			            isRingLight: CONTROLLER.isRingLight,
+			            isRingLight: document.getElementById('ringLightSetting').value,
+                        isFullScreen: (!window.screenTop && !window.screenY),
 			        };
 
 			        CONTROLLER.getRequest(method, url, data).then((coords) => {
@@ -108,7 +109,8 @@ let CONTROLLER = {
     },
 
 	collectData: () => {
-		CONTROLLER.isRingLight = confirm("Are you using a ring light?");
+		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
+        CONTROLLER.isCanceled = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
 		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
@@ -119,6 +121,7 @@ let CONTROLLER = {
 			});
 		}else{
 			CONTROLLER.incrementFullSubPath();
+            CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
 		}
 	},
 
@@ -126,6 +129,11 @@ let CONTROLLER = {
 		let previousPoint = currentPoint % 5
 		currentPoint = (currentPoint +1) % 5;
 		revCounter += 1;
+
+        if(CONTROLLER.isCanceled){
+            return;
+        }
+
 		if(revCounter > (3*5)){
 			// End
 			alert("Done");

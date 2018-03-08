@@ -179,6 +179,43 @@ let MODEL = {
 
     },
 
+    getModelInput: () => {
+        let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+        [wholeImage, imageLeft, imageRight, imageFace] = getModelPics(features);
+        let faceGrid = createFaceGridFromBox(wholeImage, features['face'], features['faceGridPoints']);
+        return [imageLeft, imageRight, imageFace, faceGrid]
+    },
+
+    getModelPics: (features) => {
+        let wholeImage = DISPLAY.getSaveCanvasImageData();
+        let imageLeft = DISPLAY.saveContext.getImageData.apply(this, features['leftEye']);
+        let imageRight = DISPLAY.saveContext.getImageData.apply(this, features['rightEye']);
+        let imageFace = DISPLAY.saveContext.getImageData.apply(this, features['face']);
+        return [wholeImage, imageLeft, imageRight, imageFace]
+    },  
+
+    createFaceGridFromBox: (wholeFace, faceBox, fgpts) => {
+        let h = wholeFace.height
+        let w = wholeFace.width
+
+        let vol = new Net.Vol(w, h, 1, 0.0);
+        let [fx,fy,fw,fh] = faceBox;
+        let facegrid = []
+
+        for (let y=0; y < h; y++){
+            for (let x=0; x < w; x++){
+                if(x >= fx and x <= (fx+fw) and y >= fy and y <= (fy+fh)){
+                    faceGrid.append(1);
+                }else {
+                    faceGrid.append(0);
+                }
+            }
+        }
+
+        return facegrid
+
+    },
+
     // Tests if the partialSequence is matching the primarySequence so far.
     // Input: Two arrays
     // e.g. primary = [1,2,3,2] partial = [1,2] returns true

@@ -105,6 +105,7 @@ class dataCollect:
             "perimeterPercent" : web.input().perimeterPercent,
             "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
             "isRingLight" : web.input().isRingLight,
+            "isFullScreen" : web.input().isFullScreen,
             }
         file.write(json.dumps(saveData) + '\n')
         file.close()
