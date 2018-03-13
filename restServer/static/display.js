@@ -85,8 +85,8 @@ let DISPLAY = {
     // Point domain: 
     //      0: center of the screen
     //      1-4: the corresponding algebraic quadrants 
-	drawRectPoint: (point) => {
-		let [x, y]  = MODEL.getCanvasPointOffset(point);
+	drawRectPoint: (point, perimeterPercent = 1) => {
+		let [x, y]  = MODEL.getCanvasPointOffset(point, perimeterPercent);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();

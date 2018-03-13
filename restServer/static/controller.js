@@ -15,6 +15,8 @@ let CONTROLLER = {
 
     debug: true,
 
+    eps: 0.00001,
+
     isCanceled: false,
     isRingLight: 0,
 
@@ -63,37 +65,62 @@ let CONTROLLER = {
     },
 
 	captureAtPoint: (point, perimeterPercent) => {
-		let maxCaptures = 3;
-		let numCaptures = 0;
-		return new Promise((resolve, reject)=> {
-			let captureTimeout = setInterval(()=>{
-				if(numCaptures < maxCaptures){
-					numCaptures += 1;
-					let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
-					let features = JSON.parse(TRACKER.getFormatFaceFeatures());
-    				features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
-    				features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
-    				let featuresString = JSON.stringify(features);
-					let method = "GET";
-			        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
-			        let data = {
-			            imgBase64: DISPLAY.getPicToDataURL(),
-			            faceFeatures: featuresString,
-			            currentPosition: point,
-			            saveSubPath: CONTROLLER.saveFullSubPath,
-			            perimeterPercent: perimeterPercent,
-			            isRingLight: document.getElementById('ringLightSetting').value,
-                        isFullScreen: (!window.screenTop && !window.screenY),
-			        };
+        if(parseInt(point)-point == 0){
+            let numCaptures = 0;
+            let maxCaptures = 3;
+            let waitTime = 500;
+            return new Promise((resolve, reject)=> {
+                let captureTimeout = setInterval(()=>{
+                    if(numCaptures < maxCaptures){
+                        numCaptures += 1;
+                        let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+                        let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+                        features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+                        features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+                        let featuresString = JSON.stringify(features);
+                        let method = "GET";
+                        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
+                        let data = {
+                            imgBase64: DISPLAY.getPicToDataURL(),
+                            faceFeatures: featuresString,
+                            currentPosition: point,
+                            saveSubPath: CONTROLLER.saveFullSubPath,
+                            perimeterPercent: perimeterPercent,
+                            isRingLight: document.getElementById('ringLightSetting').value,
+                            isFullScreen: (!window.screenTop && !window.screenY),
+                        };
 
-			        CONTROLLER.getRequest(method, url, data).then((coords) => {
-			        });
-			    }else{
-			    	clearTimeout(captureTimeout);
-			    	resolve();
-			    }
-			}, 500);
-		});
+                        CONTROLLER.getRequest(method, url, data).then((coords) => {
+                        });
+                    }else{
+                        clearTimeout(captureTimeout);
+                        resolve();
+                    }
+                }, waitTime);
+            });
+        }else{
+            return new Promise((resolve, reject) => {
+                let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+                let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+                features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+                features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+                let featuresString = JSON.stringify(features);
+                let method = "GET";
+                let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
+                let data = {
+                    imgBase64: DISPLAY.getPicToDataURL(),
+                    faceFeatures: featuresString,
+                    currentPosition: point,
+                    saveSubPath: CONTROLLER.saveFullSubPath,
+                    perimeterPercent: perimeterPercent,
+                    isRingLight: document.getElementById('ringLightSetting').value,
+                    isFullScreen: (!window.screenTop && !window.screenY),
+                };
+
+                CONTROLLER.getRequest(method, url, data)
+                resolve()
+            });
+        }
 	},
 
     checkConsistent: (quadrant) =>{
@@ -126,23 +153,54 @@ let CONTROLLER = {
 	},
 
 	_collectData: (currentPoint, revCounter, perimeterPercent) => {
-		let previousPoint = currentPoint % 5
-		currentPoint = (currentPoint +1) % 5;
-		revCounter += 1;
+		let numOfRev = 3;
+        let numOfInterSteps = 20;
+        let numOfInterPics = 10;
+        let stepSize = 1 / numOfInterSteps;
+        let picStep = 1 / numOfInterPics;
+        let previousPoint = currentPoint
+
+        if(currentPoint == -1){
+            currentPoint = -1 * stepSize
+        } 
+
+		currentPoint = (Math.round(((currentPoint + stepSize) % 5)*100)/100);
+        
+		if(currentPoint - CONTROLLER.eps < 0) {
+            revCounter += 1;
+        } 
 
         if(CONTROLLER.isCanceled){
             return;
         }
 
-		if(revCounter > (3*5)){
+		if(revCounter > numOfRev){
 			// End
 			alert("Done");
 		}else{
-			DISPLAY.transitionRecPoint(previousPoint, currentPoint, perimeterPercent).then(()=>{
-				CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
-					CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-				});
+
+            let newStep = new Promise((resolve, reject) =>{
+                DISPLAY.drawRectPoint(currentPoint, perimeterPercent)
+                setTimeout(() => {
+                    resolve();
+                },75);
+            });
+
+            newStep.then(()=>{
+                if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) * Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
+                    CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+                        CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                    });    
+                }else {
+                    CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                }
 			});
+
+            // DISPLAY.drawRectPoint(currentPoint, perimeterPercent)
+            // CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+            //     CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+            // });
+
 		}
 	},
 
