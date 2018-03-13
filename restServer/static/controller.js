@@ -187,7 +187,7 @@ let CONTROLLER = {
             });
 
             newStep.then(()=>{
-                if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) * Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
+                if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) / Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
                     CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
                         CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
                     });    
