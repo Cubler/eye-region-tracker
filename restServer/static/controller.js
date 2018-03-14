@@ -407,7 +407,7 @@ let CONTROLLER = {
             perimeterPercent: perimeterPercent,
             isRingLight: document.getElementById('ringLightSetting').value,
             isFullScreen: (!window.screenTop && !window.screenY),
-            aspectRatio: window.innerHeight / window.innerWidth,
+            aspectDim: [window.innerHeight, window.innerWidth],
         };
 
         return data;

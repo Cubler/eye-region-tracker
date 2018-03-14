@@ -109,6 +109,7 @@ class dataCollect:
             "isFullScreen" : web.input().isFullScreen,
             "modelDuration" : modelDuration,
             "totalDuration" : time.time() - startCaptureTime,
+            "aspectDim" : web.input().aspectDim,
             }
         file.write(json.dumps(saveData) + '\n')
         file.close()
