@@ -107,9 +107,10 @@ def run(subfolderPath):
 
 def runFast(leftEyePic, rightEyePic, facePic, faceGrid):
     modelsPath='./models'
-    caffe.set_mode_gpu()
 
     runStartTime = time.time()
+    caffe.set_mode_gpu()
+
     out=[]
     
     faceGridData= faceGrid
@@ -132,6 +133,8 @@ def runFast(leftEyePic, rightEyePic, facePic, faceGrid):
 
 def setUpTransformer():
     modelsPath='./models'
+    caffe.set_mode_gpu()
+
     transformer = caffe.io.Transformer({
         'image_left': net.blobs['image_left'].data.shape,
         'image_right': net.blobs['image_right'].data.shape,

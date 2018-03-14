@@ -15,8 +15,10 @@ let CONTROLLER = {
 
     debug: true,
 
+    eps: 0.00001,
+
     isCanceled: false,
-    isRingLight: false,
+    isRingLight: 0,
 
     // The change in score for a miss and a hit respectively 
     missPoints: -5,
@@ -63,36 +65,33 @@ let CONTROLLER = {
     },
 
 	captureAtPoint: (point, perimeterPercent) => {
-		let maxCaptures = 3;
-		let numCaptures = 0;
-		return new Promise((resolve, reject)=> {
-			let captureTimeout = setInterval(()=>{
-				if(numCaptures < maxCaptures){
-					numCaptures += 1;
-					let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
-					let features = JSON.parse(TRACKER.getFormatFaceFeatures());
-    				features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
-    				features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
-    				let featuresString = JSON.stringify(features);
-					let method = "GET";
-			        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
-			        let data = {
-			            imgBase64: DISPLAY.getPicToDataURL(),
-			            faceFeatures: featuresString,
-			            currentPosition: point,
-			            saveSubPath: CONTROLLER.saveFullSubPath,
-			            perimeterPercent: perimeterPercent,
-			            isRingLight: CONTROLLER.isRingLight,
-			        };
-
-			        CONTROLLER.getRequest(method, url, data).then((coords) => {
-			        });
-			    }else{
-			    	clearTimeout(captureTimeout);
-			    	resolve();
-			    }
-			}, 500);
-		});
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.saveRequestURL;
+               
+        if(parseInt(point)-point == 0){
+            let numCaptures = 0;
+            let maxCaptures = 3;
+            let waitTime = 500;
+            return new Promise((resolve, reject)=> {
+                let captureTimeout = setInterval(()=>{
+                    if(numCaptures < maxCaptures){
+                        numCaptures += 1;
+                        let data = CONTROLLER.getSaveData(point, perimeterPercent);
+                        CONTROLLER.getRequest(method, url, data).then((coords) => {
+                        });
+                    }else{
+                        clearTimeout(captureTimeout);
+                        resolve();
+                    }
+                }, waitTime);
+            });
+        }else{
+            return new Promise((resolve, reject) => {
+                let data = CONTROLLER.getSaveData(point, perimeterPercent);
+                CONTROLLER.getRequest(method, url, data)
+                resolve()
+            });
+        }
 	},
 
     checkConsistent: (quadrant) =>{
@@ -108,33 +107,79 @@ let CONTROLLER = {
     },
 
 	collectData: () => {
-		CONTROLLER.isRingLight = confirm("Are you using a ring light?");
+		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
+        CONTROLLER.isCanceled = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
 		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
-	
-		if(CONTROLLER.saveSubPath == null){
-			CONTROLLER.setSaveSubPath().then(()=>{
-				CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-			});
-		}else{
-			CONTROLLER.incrementFullSubPath();
-		}
+        let isFullScreenConfirm = confirm("I'd like to go full screen please")
+        if(isFullScreenConfirm){
+            CONTROLLER.requestFullScreen(document.documentElement);
+        } 
+
+        DISPLAY.drawRectPoint(0,perimeterPercent);
+        setTimeout(() => {
+            if(CONTROLLER.saveSubPath == null){
+                CONTROLLER.setSaveSubPath().then(()=>{
+                    CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                });
+            }else{
+                CONTROLLER.incrementFullSubPath();
+                CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+            }
+        },500);
 	},
 
 	_collectData: (currentPoint, revCounter, perimeterPercent) => {
-		let previousPoint = currentPoint % 5
-		currentPoint = (currentPoint +1) % 5;
-		revCounter += 1;
-		if(revCounter > (3*5)){
+		let numOfRev = 3;
+        let numOfInterSteps = 20;
+        let numOfInterPics = 10;
+        let stepSize = 1 / numOfInterSteps;
+        let picStep = 1 / numOfInterPics;
+        let previousPoint = currentPoint
+
+        if(currentPoint == -1){
+            currentPoint = -1 * stepSize
+        } 
+
+		currentPoint = (Math.round(((currentPoint + stepSize) % 5)*100)/100);
+        
+		if(currentPoint - CONTROLLER.eps < 0) {
+            revCounter += 1;
+        } 
+
+        if(CONTROLLER.isCanceled){
+            return;
+        }
+
+		if(revCounter > numOfRev){
 			// End
 			alert("Done");
+            CONTROLLER.exitFullscreen();
 		}else{
-			DISPLAY.transitionRecPoint(previousPoint, currentPoint, perimeterPercent).then(()=>{
-				CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
-					CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-				});
+
+            let newStep = new Promise((resolve, reject) =>{
+                DISPLAY.drawRectPoint(currentPoint, perimeterPercent)
+                setTimeout(() => {
+                    resolve();
+                },75);
+            });
+
+            newStep.then(()=>{
+                if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) / Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
+                    CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+                        CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                    });    
+                }else {
+                    CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                }
 			});
+
+            // DISPLAY.drawRectPoint(currentPoint, perimeterPercent)
+            // CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+            //     CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+            // });
+
 		}
 	},
 
@@ -178,6 +223,18 @@ let CONTROLLER = {
     	features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
     	features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
     	CONTROLLER.downloadFeatures(features, "faceFeatures.json");
+    },
+
+    exitFullScreen: () => {
+         if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
     },
 
     getActionFeedback: (lastQuadrant = -1) =>{
@@ -336,6 +393,26 @@ let CONTROLLER = {
         });
     },
 
+    getSaveData: (point, perimeterPercent) => {
+        let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+        let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+        features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+        features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+        let featuresString = JSON.stringify(features);
+        let data = {
+            imgBase64: DISPLAY.getPicToDataURL(),
+            faceFeatures: featuresString,
+            currentPosition: point,
+            saveSubPath: CONTROLLER.saveFullSubPath,
+            perimeterPercent: perimeterPercent,
+            isRingLight: document.getElementById('ringLightSetting').value,
+            isFullScreen: (!window.screenTop && !window.screenY),
+            aspectDim: [window.innerHeight, window.innerWidth],
+        };
+
+        return data;
+    },
+
     // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
@@ -440,11 +517,33 @@ let CONTROLLER = {
 
     },
 
+    goToAnimationCanvas: () => {
+        window.location.href='#animationCanvas'
+    },
+
+    isFullScreen: () => {
+        return (!window.screenTop && !window.screenY)
+    },
+
 	incrementFullSubPath: () => {
 		CONTROLLER.saveRoundNum += 1;
 		CONTROLLER.saveFullSubPath = CONTROLLER.saveSubPath + '/' + 
 			CONTROLLER.saveRoundNum;
 	},
+
+    requestFullScreen: (element) => {
+        // Supports most browsers and their versions.
+        let requestMethod = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || element.msRequestFullScreen;
+
+        if (requestMethod) { // Native full screen.
+            requestMethod.call(element);
+        } else if (typeof window.ActiveXObject !== "undefined") { // Older IE.
+            let wscript = new ActiveXObject("WScript.Shell");
+            if (wscript !== null) {
+                wscript.SendKeys("{F11}");
+            }
+        }
+    },
 
     // Handle either finishing the game if all rounds are complete or continuing to next round.
     // Event.round = round that was completed
@@ -483,6 +582,10 @@ let CONTROLLER = {
     setup: () => {
     	window.addEventListener('roundComplete', CONTROLLER.roundCompleteHandler);
     	window.addEventListener('decision', CONTROLLER.decisionHandler);
+        $(document).on('webkitfullscreenchange mozfullscreenchange fullscreenchange', function(e){
+            CONTROLLER.goToAnimationCanvas();
+        });
+
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");
@@ -550,7 +653,6 @@ let CONTROLLER = {
     	});
     	window.dispatchEvent(event);
     },
-
 } 
 
 $(document).ready(() => {

@@ -10,7 +10,6 @@ import time
 import json
 from urlparse import urlparse, parse_qs
 from requests_toolbelt.multipart import decoder
-import os
 import io
 import shutil
 import time
@@ -31,6 +30,7 @@ urls = (
     '/feedback', 'feedback',
     '/eyeTrainer', 'eyeTrainer',
     '/getCoordsFast', 'getCoordsFast',
+    '/models/mean_images/mean_face_224.binaryproto', 'mean_face',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -80,12 +80,13 @@ class dataCollect:
         imageArray = np.array(image)[:,:,:]
 
         [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
-            
+        modelStartTime = time.time()    
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
+        modelDuration = time.time() - modelStartTime
 
         rawSubPath = 0
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveSubPath
-        currentPosition = int(web.input().currentPosition)
+        currentPosition = float(web.input().currentPosition)
         features = json.loads(web.input().faceFeatures)
 
         while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
@@ -105,11 +106,15 @@ class dataCollect:
             "perimeterPercent" : web.input().perimeterPercent,
             "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
             "isRingLight" : web.input().isRingLight,
+            "isFullScreen" : web.input().isFullScreen,
+            "modelDuration" : modelDuration,
+            "totalDuration" : time.time() - startCaptureTime,
+            "aspectDim" : web.input().aspectDim,
             }
         file.write(json.dumps(saveData) + '\n')
         file.close()
 		
-        print("Duration: %.3f" % (time.time() - startCaptureTime))
+        print("Model Time: %.3f" % (modelDuration))
 
 		# Delete data subfolder
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
@@ -127,6 +132,7 @@ class getCoordsFast:
         imageArray = np.array(image)[:,:,:]
 
         [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+
         global histogramEq        
         if(histogramEq):
             leftEyePic = exposure.equalize_hist(leftEyePic)

@@ -1,0 +1,57 @@
+g.layer-conv > rect, g.layer-fc > rect {
+  fill: #4285f4;
+}
+
+g.layer-pool > rect {
+  fill: #db4437;
+}
+
+g.layer-lrn > rect {
+  fill: #0f9d58;
+}
+
+g.layer-inception > rect, g.layer-fire > rect {
+  fill: #129d5a;
+}
+
+g.layer-concat > rect {
+  fill: #129d5a;
+}
+
+g.layer-input > rect, g.layer-softmax > rect {
+  fill: #f4b400;
+}
+
+text {
+  font-size: 14px;
+}
+
+.label {
+  color: #000;
+}
+
+.node rect {
+  fill: #ddd;
+  stroke: none;
+}
+
+.edgePath path, .edgePath marker {
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+.edgePath marker {
+  fill: #fff;
+}
+
+.label text {
+  padding-left:0.75em;
+  font-size: 12px;
+  font-family: monospace;
+  fill: #333;
+}
+
+svg div {
+  text-align: center;
+  font-size: 14px;
+}

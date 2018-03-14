@@ -7,6 +7,7 @@ import sys
 from scipy import ndimage
 from scipy import misc
 import PIL
+import time
 
 maxsize = (224,224)
 isWholeFace = True
@@ -45,6 +46,7 @@ def setUp(subfolderPath):
 
 def setUpNoSave(wholeFace, featureString):
 	# for numOfPics: since we are ignoring photo (0) we get +1 num of photos we are going to prcess and therefore this works for range(start,<) 
+#    startSetupTime = time.time()
     features = json.loads(featureString)
     leftEyeBox = np.round(features['leftEye']).astype(int)
     rightEyeBox = np.round(features['rightEye']).astype(int)
@@ -60,11 +62,15 @@ def setUpNoSave(wholeFace, featureString):
     	faceBox[0] = 0
     	faceBox[1] = 0
 
+#    print("Pre Crop Image Time: %.2f" % (time.time()-startSetupTime))
 	# Crop Whole Image and save
     leftEyePic = cropWithParams(wholeFace,leftEyeBox)
     rightEyePic = cropWithParams(wholeFace,rightEyeBox)
     wholeFacePic = cropWithParams(wholeFace,faceBox)
+#    print("Pre faceGrid Time: %.2f" % (time.time()-startSetupTime))
     faceGridParams = createFaceGridFromFaceBox(wholeFace,faceBox,faceGridPoints)
+
+#    print("Full Crop Image Time: %.2f" % (time.time()-startSetupTime))
 
     return leftEyePic, rightEyePic, wholeFacePic, faceGridParams.tolist()
 
@@ -119,18 +125,26 @@ def createFaceGridFromFeatures(wholeFace, faceBox, fgpts):
 	return faceGridParams;
 
 def createFaceGridFromFaceBox(wholeFace, faceBox, fgpts):
-	[fx,fy,fw,fh]=faceBox;
-	faceGrid = np.zeros((wholeFace.shape[0],wholeFace.shape[1]));
-	for y in range(0,faceGrid.shape[0]):
-		for x in range(0,faceGrid.shape[1]):
-			if(x >= fx and x <= (fx+fw) and y >= fy and y <= (fy+fh)):
-				faceGrid[y][x]=1;
+#    startFaceGridTime = time.time()
+    [fx,fy,fw,fh]=faceBox;
+    size = 25
+    xRatio = size / wholeFace.shape[0]
+    yRatio = size / wholeFace.shape[1]
+    [fx,fy,fw,fh]= [fx*xRatio, fy*yRatio, fw*xRatio, fh*yRatio]
+
+    faceGrid = np.zeros((size,size));
+    for y in range(0,faceGrid.shape[0]):
+        for x in range(0,faceGrid.shape[1]):
+            if(x >= fx and x <= (fx+fw) and y >= fy and y <= (fy+fh)):
+                faceGrid[y][x]=1;
 	#misc.imsave('faceGridPic.jpg', faceGrid)
-	faceGridParams = misc.imresize(faceGrid,(25,25)).flatten()
-	for i in range(0,len(faceGridParams)):
-		if(faceGridParams[i]!=0):
-			faceGridParams[i]=1
-	return faceGridParams
+#    print("Post facegrid for loops time: %.2f" % (time.time() - startFaceGridTime))
+    faceGridParams = misc.imresize(faceGrid,(25,25)).flatten()
+#    print("Post facegrid imresize time: %.2f" % (time.time() - startFaceGridTime))
+    for i in range(0,len(faceGridParams)):
+        if(faceGridParams[i]!=0):
+            faceGridParams[i]=1
+    return faceGridParams
 
 def main():
 	savePath = './myData/'

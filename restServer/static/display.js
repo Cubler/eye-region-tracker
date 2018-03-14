@@ -85,8 +85,8 @@ let DISPLAY = {
     // Point domain: 
     //      0: center of the screen
     //      1-4: the corresponding algebraic quadrants 
-	drawRectPoint: (point) => {
-		let [x, y]  = MODEL.getCanvasPointOffset(point);
+	drawRectPoint: (point, perimeterPercent = 1) => {
+		let [x, y]  = MODEL.getCanvasPointOffset(point, perimeterPercent);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
@@ -101,6 +101,11 @@ let DISPLAY = {
         DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         return DISPLAY.saveCanvas.toDataURL('image/jpeg');
+    },
+
+    getSaveCanvasImageData: () => {
+        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        return DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
     },
 
     // resizes the animation canvas so that it fills the window and is independent of browser.
@@ -160,8 +165,8 @@ let DISPLAY = {
     },
 
     showEdges: () => {
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imgData = DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        
+        let imgData = DISPLAY.getSaveCanvasImageData();
         let edgeData = TRACKER.edgeDetection(imgData);
         let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
         edgeImageData.data.set(new Uint8ClampedArray(edgeData[0]));

@@ -75,21 +75,27 @@ let MODEL = {
 	getCanvasPointOffset: (point, perimeterPercent=1) => {
 		let x = null;
 		let y = null;
-		switch(parseInt(point)){
-            case 0: x=0;
-                    y=0;
+        let p = parseFloat(point)
+		switch(true){
+            case (p<1):
+                    x=p*1;
+                    y=p*(-1);
                     break;
-            case 1: x=1;
+            case (p<2):
+                    x=1-((p-1)*2);
                     y=-1;
                     break;
-            case 2: x=-1;
-                    y=-1;
+            case (p<3):
+                    x=-1;
+                    y=-1+((p-2)*2);
                     break;
-            case 3: x=-1;
+            case (p<4):
+                    x=-1+((p-3)*2);
                     y=1;
                     break;  
-            case 4: x=1;
-                    y=1;
+            case (p<5):
+                    x=1-(p-4)*1;
+                    y=1-(p-4)*1;
                     break; 
     	}
 		return [x*perimeterPercent,y*perimeterPercent]
@@ -176,6 +182,48 @@ let MODEL = {
 
         document.getElementById('edgeMetric').value = parseFloat(leftAvg).toFixed(2) +", " + parseFloat(rightAvg).toFixed(2);
         return [leftAvg, rightAvg]
+
+    },
+
+    getModelInput: () => {
+        let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+        [wholeImage, imageLeft, imageRight, imageFace] = MODEL.getModelPics(features);
+        let faceGrid = MODEL.createFaceGridFromBox(wholeImage, features['face'], features['faceGridPoints']);
+        return [imageLeft, imageRight, imageFace, faceGrid]
+    },
+
+    getModelPics: (features) => {
+        let wholeImage = DISPLAY.getSaveCanvasImageData();
+        let imageLeft = DISPLAY.saveContext.getImageData.apply(DISPLAY.saveContext, features['leftEye']);
+        let imageRight = DISPLAY.saveContext.getImageData.apply(DISPLAY.saveContext, features['rightEye']);
+        let imageFace = DISPLAY.saveContext.getImageData.apply(DISPLAY.saveContext, features['face']);
+        return [wholeImage, imageLeft, imageRight, imageFace]
+    },  
+
+    createFaceGridFromBox: (wholeFace, faceBox, fgpts) => {
+        let h = wholeFace.height
+        let w = wholeFace.width
+        let [fx,fy,fw,fh] = faceBox;
+        let size = 25;
+        let xRatio = size / w;
+        let yRatio = size / h;
+
+        [fx,fy,fw,fh] = [fx * xRatio,fy * yRatio,fw * xRatio,fh * yRatio]
+
+
+        let facegrid = []
+
+        for (let y=0; y < size; y++){
+            for (let x=0; x < size; x++){
+                if(x >= fx && x <= (fx+fw) && y >= fy && y <= (fy+fh)){
+                    facegrid.push(1);
+                }else {
+                    facegrid.push(0);
+                }
+            }
+        }
+
+        return facegrid
 
     },
 
