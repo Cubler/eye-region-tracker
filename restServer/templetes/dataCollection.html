@@ -13,7 +13,12 @@ $def with (page)
   <script src="./static/tracking.js/src/alignment/training/Landmarks.js"></script>
   <script src="./static/tracking.js/src/alignment/training/Regressor.js"></script>
 
-  <script src="./static/faceCapture.js" type="text/javascript"></script>
+  <script src="./static/display.js" type="text/javascript"></script>
+  <script src="./static/tracker.js" type="text/javascript"></script>
+  <script src="./static/controller.js" type="text/javascript"></script>
+  <script src="./static/model.js" type="text/javascript"></script>
+  <script src="./static/dataCollection.js" type="text/javascript"></script>
+
     <link rel='stylesheet' href='./static/style.css'>
   
 </head>
@@ -21,9 +26,10 @@ $def with (page)
   <div class="view-frame">
       <video id="video" width="320" height="240" preload autoplay loop muted></video>
 
-      <canvas id="canvas" width="320" height="240"></canvas>
+      <canvas id="videoCanvas" width="320" height="240"></canvas>
   </div>
 
+ 
   <div id="instructions"><p>
    <b>Instructions:</b> <br>
 <b>1)</b> The task is to look at the black dot as it traverses around the screen. It must be done on a laptop or monitor with a webcam, no smartphones please.<br>
@@ -39,25 +45,45 @@ $def with (page)
 
   </div class = "save-frame">
     <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
-    <canvas id="save" width="640" height="426"></canvas>
+    <canvas id="saveCanvas" width="640" height="426"></canvas>
   </div>
-  
-  <input type="number" id="positionChoice" min="0" max="4">
-  <button id="getPos" >Get Position</button>
-  <button id="trackButton" onclick= "window.location.href='#circleCanvas'">Start</button>
-  <button id="cancelTrack" >Cancel Track</button>
 
-  <div class="circleTrack">
-    <canvas id="circleCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
+  <br>
+  </div id = "input">  
+    <button id="collectData"> Collect Data </button>
+    <button id="cancelTrack" >Cancel</button>
+    <button id="getEdgeMetric">Get Edge Metric</button>
+    Eye Edge Average: <input type="text" id="edgeMetric">
+    RingLightSetting: <input type="number" id="ringLightSetting" min="0" max="10" value="0">
+  </div>
+
+  <div class="animation">
+    <canvas id="animationCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
     
 <br>
-<textarea id="coords" rows="4" cols="50">
-"Original Text"
-</textarea>
-<textarea id="coordsList" rows="4" cols="50">
-"Original Text"
-</textarea>
-<!--  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a> -->
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<audio id="audio1" src="./static/audio/High_Right_G.mp3" autostart = "false"></audio>
+<audio id="audio2" src="./static/audio/High_Left_B.mp3" autostart = "false"></audio>
+<audio id="audio3" src="./static/audio/Low_Left_B.mp3" autostart = "false"></audio>
+<audio id="audio4" src="./static/audio/Low_Right_G.mp3" autostart = "false"></audio>
+<audio id="default" src="https://www.soundjay.com/button/beep-22.mp3" autostart = "false"></audio>
 
 
 $:page

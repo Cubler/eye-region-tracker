@@ -30,7 +30,7 @@ urls = (
     '/feedback', 'feedback',
     '/eyeTrainer', 'eyeTrainer',
     '/getCoordsFast', 'getCoordsFast',
-    '/models/mean_images/mean_face_224.binaryproto', 'mean_face',
+    '/cancelDataCollect', 'cancelDataCollect',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -85,20 +85,18 @@ class dataCollect:
         modelDuration = time.time() - modelStartTime
 
         rawSubPath = 0
-        subfolderPath = web.ctx['ip'] + '/' + web.input().saveSubPath
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
         currentPosition = float(web.input().currentPosition)
         features = json.loads(web.input().faceFeatures)
-
+                # Saves 5 of the picture captures so they can be analysed later if need be
         while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
             rawSubPath += 1
-
         if(rawSubPath < 5):
             file = open(savePath + subfolderPath + '/' + str(rawSubPath) +  '/faceFeatures.json','w+')
             file.write(web.input().faceFeatures)
             file.close() 
-
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
-       
+        
         file = open(savePath + subfolderPath + '/coordsList.txt','a+')
         saveData = {
             "currentPosition" : str(currentPosition),
@@ -120,6 +118,16 @@ class dataCollect:
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
 
+class cancelDataCollect:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        shutil.rmtree(savePath + subfolderPath)
+        os.removedirs(savePath + web.ctx['ip'] + '/' + web.input().saveSubPath)
+#        file = open(savePath + subfolderPath + '/canceled.txt','w')
+#        file.write("Canceled")
+#        file.close()
+
+        
 
 class getCoordsFast:
     def GET(self):

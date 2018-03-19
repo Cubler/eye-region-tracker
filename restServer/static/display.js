@@ -113,7 +113,7 @@ let DISPLAY = {
 		DISPLAY.offset = window.innerWidth * 0.02;
 		DISPLAY.xoffset = (window.innerWidth-50)/2-DISPLAY.offset;
    		DISPLAY.xstart = (window.innerWidth-50)/2;
-	    DISPLAY.yoffset = window.innerHeight*0.4;
+	    DISPLAY.yoffset = window.innerHeight*0.45;
 		DISPLAY.ystart = DISPLAY.yoffset + DISPLAY.offset;
 
         DISPLAY.animationContext.canvas.width = window.innerWidth-50;

@@ -33,6 +33,8 @@ let CONTROLLER = {
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
 
+    cancelDataCollectURL: "/cancelDataCollect",
+
     saveSubPath: null,
     saveFullSubPath: null,
     saveRoundNum: 0,
@@ -43,6 +45,17 @@ let CONTROLLER = {
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
+    },
+
+    cancelDataCollectRequest: () => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.cancelDataCollectURL;
+        let data = {
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
+            saveSubPath: CONTROLLER.saveSubPath,
+            saveRoundNum: CONTROLLER.saveRoundNum.toString(),
+        };
+        CONTROLLER.getRequest(method, url, data);
     },
 
     // Preforms a one time request to get and show coordinates from the server.
@@ -78,6 +91,12 @@ let CONTROLLER = {
                         numCaptures += 1;
                         let data = CONTROLLER.getSaveData(point, perimeterPercent);
                         CONTROLLER.getRequest(method, url, data).then((coords) => {
+                            if(CONTROLLER.isCanceled){
+                                CONTROLLER.cancelDataCollectRequest();
+                                clearTimeout(captureTimeout);
+                                resolve()
+                                return;
+                            }
                         });
                     }else{
                         clearTimeout(captureTimeout);
@@ -88,7 +107,11 @@ let CONTROLLER = {
         }else{
             return new Promise((resolve, reject) => {
                 let data = CONTROLLER.getSaveData(point, perimeterPercent);
-                CONTROLLER.getRequest(method, url, data)
+                CONTROLLER.getRequest(method, url, data).then(() => {
+                    if(CONTROLLER.isCanceled){
+                        CONTROLLER.cancelDataCollectRequest();
+                    }
+                });
                 resolve()
             });
         }
@@ -106,12 +129,11 @@ let CONTROLLER = {
     	CONTROLLER.debouncerArray = [];
     },
 
-	collectData: () => {
+	collectData: (perimeterPercent = 0.7) => {
 		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
         CONTROLLER.isCanceled = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
-		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
         let isFullScreenConfirm = confirm("I'd like to go full screen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
@@ -149,6 +171,7 @@ let CONTROLLER = {
         } 
 
         if(CONTROLLER.isCanceled){
+            CONTROLLER.cancelDataCollectRequest();
             return;
         }
 
@@ -403,11 +426,11 @@ let CONTROLLER = {
             imgBase64: DISPLAY.getPicToDataURL(),
             faceFeatures: featuresString,
             currentPosition: point,
-            saveSubPath: CONTROLLER.saveFullSubPath,
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
             perimeterPercent: perimeterPercent,
             isRingLight: document.getElementById('ringLightSetting').value,
             isFullScreen: (!window.screenTop && !window.screenY),
-            aspectDim: [window.innerHeight, window.innerWidth],
+            aspectDim: [window.innerHeight, window.innerWidth].toString(),
         };
 
         return data;
