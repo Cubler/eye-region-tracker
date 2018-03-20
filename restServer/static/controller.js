@@ -45,6 +45,7 @@ let CONTROLLER = {
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
+        CONTROLLER.exitFullScreen();
     },
 
     cancelDataCollectRequest: () => {

@@ -1,5 +1,11 @@
 $(document).ready(() => {
 
+    trailToPerimPercent = {
+        "1": 0.7,
+        "2": 1.0,
+        "3": 0.5,
+    }
+
     // Event Listeners 
     //document.getElementById('getPos').addEventListener("click", CONTROLLER.capture);
     //document.getElementById('trackButton').addEventListener("click", CONTROLLER.startSimonSays);
@@ -26,7 +32,9 @@ $(document).ready(() => {
 
     $('#collectData').click(()=>{
         window.location.href='#animationCanvas'
-        CONTROLLER.collectData();
+        trail = document.getElementById("trailNum").value
+        pp = trailToPerimPercent[trail]
+        CONTROLLER.collectData(pp);
     });
 
     $(window).resize(function(){
