@@ -1,6 +1,6 @@
 $(document).ready(() => {
 
-    trailToPerimPercent = {
+    trialToPerimPercent = {
         "1": 0.7,
         "2": 1.0,
         "3": 0.5,
@@ -32,13 +32,28 @@ $(document).ready(() => {
 
     $('#collectData').click(()=>{
         window.location.href='#animationCanvas'
-        trail = document.getElementById("trailNum").value
-        pp = trailToPerimPercent[trail]
+        trial = document.getElementById("trialNum").value
+        pp = trialToPerimPercent[trial]
         CONTROLLER.collectData(pp);
     });
 
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
+    });
+
+    // Modal code adapted from https://www.w3schools.com/howto/howto_css_modal_images.asp
+    var modal = document.getElementById('myModal');
+    var img = document.getElementById('myImg');
+    var modalImg = document.getElementById("img01");
+    var captionText = document.getElementById("caption");
+
+    $('.thumbnail').click((event)=>{
+        modal.style.display = "block";
+        modalImg.src = event.target.src;
+        captionText.innerHTML = event.target.alt;
+    });
+    $('.close').click(()=>{
+        modal.style.display = "none";
     });
 
 });

@@ -18,6 +18,7 @@ let CONTROLLER = {
     eps: 0.00001,
 
     isCanceled: false,
+    isDone: false,
     isRingLight: 0,
 
     // The change in score for a miss and a hit respectively 
@@ -32,6 +33,7 @@ let CONTROLLER = {
 
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
+    getTrialStatsURL: "/getTrialStats",
 
     cancelDataCollectURL: "/cancelDataCollect",
 
@@ -41,7 +43,7 @@ let CONTROLLER = {
 
 	// The server URL to send requests to
 	serverURL: "https://localhost:3000",
-
+//    serverURL: "https://comp158.cs.unc.edu:8080",
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
@@ -98,6 +100,9 @@ let CONTROLLER = {
                                 resolve()
                                 return;
                             }
+                            if(CONTROLLER.isDone){
+                                DISPLAY.showTrialStats();
+                            }
                         });
                     }else{
                         clearTimeout(captureTimeout);
@@ -133,9 +138,10 @@ let CONTROLLER = {
 	collectData: (perimeterPercent = 0.7) => {
 		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
         CONTROLLER.isCanceled = false;
+        CONTROLLER.isDone = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
-        let isFullScreenConfirm = confirm("I'd like to go full screen please")
+        let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
         } 
@@ -178,8 +184,10 @@ let CONTROLLER = {
 
 		if(revCounter > numOfRev){
 			// End
-			alert("Done");
-            CONTROLLER.exitFullscreen();
+            CONTROLLER.isDone = true;
+			alert("This trial is done!");
+            CONTROLLER.exitFullScreen();
+            DISPLAY.showTrialStats();
 		}else{
 
             let newStep = new Promise((resolve, reject) =>{
@@ -437,6 +445,20 @@ let CONTROLLER = {
         return data;
     },
 
+    getTrialStats: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.getTrialStatsURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                stats = JSON.parse(jsonS);
+                resolve(stats);
+            });
+        });
+    },
+
     // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
@@ -609,7 +631,7 @@ let CONTROLLER = {
         $(document).on('webkitfullscreenchange mozfullscreenchange fullscreenchange', function(e){
             CONTROLLER.goToAnimationCanvas();
         });
-
+        CONTROLLER.serverURL = window.location.href.substring(0,window.location.href.indexOf(window.location.pathname));
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");

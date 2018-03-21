@@ -20,7 +20,100 @@ $def with (page)
   <script src="./static/dataCollection.js" type="text/javascript"></script>
 
     <link rel='stylesheet' href='./static/style.css'>
-  
+  <style>
+body {font-family: Arial, Helvetica, sans-serif;}
+
+#myImg {
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#myImg:hover {opacity: 0.7;}
+
+/* The Modal (background) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.9); /* Black w/ opacity */
+}
+
+/* Modal Content (image) */
+.modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+}
+
+/* Caption of Modal Image */
+#caption {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    text-align: center;
+    color: #ccc;
+    padding: 10px 0;
+    height: 150px;
+}
+
+/* Add Animation */
+.modal-content, #caption {    
+    -webkit-animation-name: zoom;
+    -webkit-animation-duration: 0.6s;
+    animation-name: zoom;
+    animation-duration: 0.6s;
+}
+
+.caption {
+	float: left;
+	width: 16%;
+}
+
+@-webkit-keyframes zoom {
+    from {-webkit-transform:scale(0)} 
+    to {-webkit-transform:scale(1)}
+}
+
+@keyframes zoom {
+    from {transform:scale(0)} 
+    to {transform:scale(1)}
+}
+
+/* The Close Button */
+.close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* 100% Image Width on Smaller Screens */
+@media only screen and (max-width: 700px){
+    .modal-content {
+        width: 100%;
+    }
+}
+</style>
 </head>
 <body>
   <div class="view-frame">
@@ -34,34 +127,69 @@ $def with (page)
    <b>Instructions:</b> <br>
 <b>1)</b> The task is to look at the black dot as it traverses around the screen. It must be done on a laptop or monitor with a webcam, no smartphones please.<br>
 <b>2)</b> (Important) Make sure your face is entirely within the frame and it is <b>well lit</b>.<br>
-<b>3)</b> Adjust lighting and positioning in order for your face to be detected. Dots and boxes will appear when there is a detection. See guidelines below.  <br>
-<b>4)</b> When ready, select the trail number you are on and press the Start button. Your window will fullscreen around the first black dot. Follow the dot as naturally as possible. <br>
+<b>3)</b> Adjust lighting and positioning in order for your face to be detected. Detection will occur well before optimal lighting for gaze prediction so please see guidelines below.  <br>
+<b>4)</b> When ready, select the trial number you are on and press the Start button. Your window will fullscreen around the first black dot. Follow the dot as naturally as possible. <br>
 <b>5)</b> If you end up getting distracted and not following the dot, you can press the Cancel button and restart at anytime. <br>
 <b>5)</b> After three revolutions the tracking will stop and the round will be complete. It will take about 90 seconds.<br>
 <b>6)</b> The rounds differ in how far from the edge of screen the dot traverses. There are 3 trials and you may repeat each of them as many times as you would like. <br>
-<b>7)</b> Please at least do trail 1 and 2 once. (Bonus Points) If you have another 90 seconds doing the last trail would be much appreciated! <br>
-<b>8)</b> Thank You!
+<b>7)</b> Please at least do trial 1 and 2 once. (Bonus Points) If you have another 90 seconds doing the last trial would be much appreciated! <br>
+<b>8)</b> After each trail, the accuracy of the system will be reported at the bottom of the page if you're interest. If you have good lighting, trials 1 and 2 should be easily above 80%, with it not unlucky to get 100%.<br> 
+<b>9)</b> Thank You!
   <p>
+  </div>
+
+  <div id="myModal" class="modal">
+	  <span class="close">&times;</span>
+	  <img class="modal-content" id="img01">
+	  <div id="caption"></div>
   </div>
 
   <div id="guidelines"><p>
-  <b> Lighting and Positioning Guidelines </b> <br>
-  <b>1)</b> Make sure your face isn't shadowed and there are no bright lights or artifacts in the background. <br>
+  <b> Lighting and Positioning Guidelines for Gaze Prediction </b> <br>
+  <b>1)</b> Make sure your eyes are not shadowed and there are no bright lights or artifacts in the background. <br>
   <b>2)</b> Position your camera so you are directly facing it. <br>
-  <b>3)</b> Use the edge metric tool to find the setup where the boxes align around your eyes and your irises are marked by white circles. <br>
-  <b>4)</b> Lighting is the most important factor for performance so please take a minute to get a good environment. <br>
-
+  <b>3)</b> Use the edge metric tool to test your environment. Boxes should align around your eyes consistently and your irises should be marked by white circles. <br>
+  <b>4)</b> Below are some examples of good and bad setups and their reasons why. Click the thumbnails to enlarge and see the description. <br>
+  <b>5)</b> Lighting is the most important factor for performance so please take a minute to setup a good environment. <br>
   <p>
+
+
   </div>
 
-  </div class = "save-frame">
+<div id = "picsContainer">
+	<b> Lighting Examples</b> <br>
+  	<div id="pics">
+      <img class="thumbnail" id="goodPic" src="./static/lightingPics/good.jpg" width = "15%" height="20%" alt="Good contrast, no shadows.">
+      <img class="thumbnail" id="goodPic2" src="./static/lightingPics/good3.jpg" width = "15%" height="20%" alt="Example of optimal Eye Edge Metric positioning and detail.">
+      <img class="thumbnail" id="badPic" src="./static/lightingPics/bad.jpg" width = "15%" height="20%" alt="Too dark and the face is shadowed.">
+      <img class="thumbnail" id="badPic" src="./static/lightingPics/bad2.jpg" width = "15%" height="20%" alt="Face and background are too washed out. They lack enough contrast and the eyes are shadowed.">
+    </div>
+    <div id="captionContainer">
+	  <div class="caption" id="caption1">
+	  	Good Contrast, no shadows
+	  </div>
+	  <div class="caption" id="caption2">
+	  	Good Eye Edge Metric 
+	  </div>
+	  <div class="caption" id="caption3">
+	  	Too Much Shadowing
+	  </div>
+	  <div class="caption" id="caption4">
+	  	Too Washed Out
+	  </div>
+	</div>
+  </div>
+
+
+
+  <div class = "save-frame">
     <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
     <canvas id="saveCanvas" width="640" height="426"></canvas>
   </div>
 
   <br>
-  </div id = "input">  
-    Trail Number: <input type="number" id="trailNum" min="1" max="3" value="1">
+  <div id = "input">  
+    Trial Number: <input type="number" id="trialNum" min="1" max="3" value="1">
     <button id="collectData"> Start </button>
     <button id="cancelTrack" >Cancel</button>
     <button id="getEdgeMetric">Get Edge Metric</button>
@@ -71,6 +199,11 @@ $def with (page)
 
   <div class="animation">
     <canvas id="animationCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
+  </div>
+<br>
+<textarea id="coordsList" rows="4" cols="50">
+"Original Text"
+</textarea>
     
 <br>
 <br>

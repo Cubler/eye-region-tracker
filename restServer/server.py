@@ -2,6 +2,7 @@
 
 import web
 import runModel
+import processRectData
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
 import myInputSetUp
 from web.wsgiserver import CherryPyWSGIServer
@@ -31,6 +32,7 @@ urls = (
     '/eyeTrainer', 'eyeTrainer',
     '/getCoordsFast', 'getCoordsFast',
     '/cancelDataCollect', 'cancelDataCollect',
+    '/getTrialStats', 'getTrialStats',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -68,6 +70,12 @@ class start:
              subPath += 1
 
         return subPath
+
+class getTrialStats:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        return statsString           
 
 class dataCollect:
     def GET(self):

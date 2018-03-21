@@ -232,6 +232,15 @@ let DISPLAY = {
         document.getElementById('sequence').value = sequence.toString();
     },
 
+    showTrialStats: () => {
+        CONTROLLER.getTrialStats().then((stats) => {
+            resultString = "quadrantAccuracy: " + stats['quadrantAccuracy'].toFixed(2) + '\n' +
+            "eyeMetricAverage: " + stats['eyeMetricAverage'][0].toFixed(2) + 
+            ", " + stats['eyeMetricAverage'][1].toFixed(2) + '\n'
+            document.getElementById('coordsList').value = resultString;
+        });
+    },
+
     // Initializes all variables referring to HTML elements that are needed for Display.js
     setup: () => {
         DISPLAY.video = document.getElementById('video');
