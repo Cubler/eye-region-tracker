@@ -34,6 +34,7 @@ let CONTROLLER = {
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
     getTrialStatsURL: "/getTrialStats",
+    contrastMetricURl: "/getContrastMetric",
 
     cancelDataCollectURL: "/cancelDataCollect",
 
@@ -390,6 +391,17 @@ let CONTROLLER = {
            	}
         }, (error) => {
             console.log(error);
+        });
+    },
+
+    getContrastMetric: () => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURl;
+        let data = CONTROLLER.getSaveData(-1, -1);
+        CONTROLLER.getRequest(method, url, data).then((metrics) =>{
+            metricsJSON = JSON.parse(metrics);
+            console.log("Histogram Spread: " + metricsJSON['hsMetric'])
+            console.log("Histogram Flatness: " + metricsJSON['hfmMetric'])
         });
     },
 

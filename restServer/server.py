@@ -37,6 +37,7 @@ urls = (
     '/cancelDataCollect', 'cancelDataCollect',
     '/getTrialStats', 'getTrialStats',
     '/simonSays', 'simonSays',
+    '/getContrastMetric', 'getContrastMetric',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
@@ -88,6 +89,22 @@ class getTrialStats:
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
         statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
         return statsString           
+
+class getContrastMetric:
+    def GET(self):
+        url = web.input().imgBase64
+        imgstr = re.search(r'base64,(.*)',url).group(1)
+        imageBytes = io.BytesIO(base64.b64decode(imgstr))
+        image = Image.open(imageBytes)
+        imageArray = np.array(image)[:,:,:]
+        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        flatGray = cm.rgb2flatGray(facePic)
+        contrastMetrics = {
+            "hsMetric" : cm.hsMetric(flatGray),
+            "hfmMetric" : cm.hfmMetric(flatGray),
+        }
+        return json.dumps(contrastMetrics)
+        
 
 class dataCollect:
     def GET(self):
