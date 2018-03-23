@@ -3,9 +3,12 @@
 import web
 import runModel
 import processRectData
+import contrastMetrics as cm
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
 import myInputSetUp
 from web.wsgiserver import CherryPyWSGIServer
+from cheroot.server import HTTPServer
+from cheroot.ssl.builtin import BuiltinSSLAdapter
 import os
 import time
 import json
@@ -33,10 +36,15 @@ urls = (
     '/getCoordsFast', 'getCoordsFast',
     '/cancelDataCollect', 'cancelDataCollect',
     '/getTrialStats', 'getTrialStats',
+    '/simonSays', 'simonSays',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
 CherryPyWSGIServer.ssl_private_key = "./ssl/myserver.key"
+
+#HTTPServer.ssl_adapter = BuiltinSSLAdapter(
+#    certificate = './ssl/myserver.crt',
+#    private_key = './ssl/myserver.key')
 
 render = web.template.render('templetes/',)
 
@@ -57,6 +65,10 @@ class dataCollection:
 class feedback:
     def GET(self):
         return render.feedback(self)
+
+class simonSays:
+    def GET(self):
+        return render.simonSays(self)
 
 class eyeTrainer:
     def GET(self):
@@ -104,13 +116,15 @@ class dataCollect:
             file.write(web.input().faceFeatures)
             file.close() 
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
-        
+        flatGray = cm.rgb2flatGray(facePic)
         file = open(savePath + subfolderPath + '/coordsList.txt','a+')
         saveData = {
             "currentPosition" : str(currentPosition),
             "coords" : output,
             "perimeterPercent" : web.input().perimeterPercent,
             "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "hsMetric" : cm.hsMetric(flatGray),
+            "hfmMetric" : cm.hfmMetric(flatGray),
             "isRingLight" : web.input().isRingLight,
             "isFullScreen" : web.input().isFullScreen,
             "modelDuration" : modelDuration,
