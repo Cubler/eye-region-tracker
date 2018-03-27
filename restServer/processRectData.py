@@ -1,12 +1,16 @@
 import numpy as np
-#import matplotlib.pyplot as plt
-#from matplotlib import cm
-#from matplotlib import colors
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib import colors
 import math
-#import matplotlib.patches as mpatches
+import matplotlib.patches as mpatches
 import sys
 import json
 import os
+import StringIO
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
+
 
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -185,6 +189,37 @@ def getAccuracy(_x,_y,_p, regions):
 def getCenterCoords(_x,_y,_p):
     [x,y] = filterByPoint(_x, _y, _p, 0);    
     return (np.mean(x), np.mean(y))
+
+def getCanvasFromCoordList(path):
+    (points, xNumpy, yNumpy, perimeterPercentNumpy, \
+        eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy) = readData(path);
+    (xNumpy, yNumpy, points) = cleanForPoints(xNumpy, yNumpy, points)
+    xCentered = centerData(xNumpy)
+    yCentered = centerData(yNumpy)
+
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    ax.plot([np.min(xCentered),np.max(xCentered)],[0,0], color='b')
+    ax.plot([0,0],[np.min(yCentered),np.max(yCentered)], color='b')
+
+	# Plot points and color them
+    color = points/4.0
+    cmap = cm.get_cmap()
+    ax.scatter(xCentered, yCentered, c=cmap(color))
+	
+	# patch0 = mpatches.Patch(color=cmap(0.0), label='PointPosition = 0')
+    patch1 = mpatches.Patch(color=cmap(.25), label='PointPosition = 1')
+    patch2 = mpatches.Patch(color=cmap(.5), label='PointPosition = 2')
+    patch3 = mpatches.Patch(color=cmap(.75), label='PointPosition = 3')
+    patch4 = mpatches.Patch(color=cmap(1.0), label='PointPosition = 4')
+    ax.legend(handles=[patch1,patch2,patch3,patch4])
+    ax.set_xlabel("Predicted X Coordinate")
+    ax.set_ylabel("Predicted Y Coordinate")
+    ax.set_title("Rectangle Corners Test")
+
+    canvas = FigureCanvasAgg(fig)
+    return canvas
+
 
 def getLabels(entryJSON, xLabel, yLabel, controlLabels, controlCondition, controlValues, average = True):
 	try:
@@ -402,8 +437,7 @@ def plotFromReport(reportPath, xLabel, yLabel, controlLabels = None, controlCond
 		plt.show()
 
 def readReport(reportPath, xLabel, yLabel, controlLabels , controlCondition, controlValues):
-	data = open(reportPath,"r")
-	xList = []
+ 
 	yList = []
 
 	for line in data:

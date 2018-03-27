@@ -23,6 +23,7 @@ import re
 import numpy as np 
 from skimage import exposure
 from skimage import io as imageIO 
+import StringIO
 
 urls = (
     '/', 'index',
@@ -38,10 +39,11 @@ urls = (
     '/getTrialStats', 'getTrialStats',
     '/simonSays', 'simonSays',
     '/getContrastMetric', 'getContrastMetric',
+    '/getPredictionPlot', 'getPredictionPlot',
 )
 
-CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
-CherryPyWSGIServer.ssl_private_key = "./ssl/myserver.key"
+CherryPyWSGIServer.ssl_certificate = "./ssl/comp158_cs_unc_edu_cert.cer"
+CherryPyWSGIServer.ssl_private_key = "./ssl/comp158_cs_unc_edu.key"
 
 #HTTPServer.ssl_adapter = BuiltinSSLAdapter(
 #    certificate = './ssl/myserver.crt',
@@ -90,6 +92,15 @@ class getTrialStats:
         statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
         return statsString           
 
+class getPredictionPlot:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        output = StringIO.StringIO()
+        canvas.print_png(output)
+        #fig.savefig(response, format='png')
+        return base64.b64encode(output.getvalue())
+
 class getContrastMetric:
     def GET(self):
         url = web.input().imgBase64
@@ -98,10 +109,19 @@ class getContrastMetric:
         image = Image.open(imageBytes)
         imageArray = np.array(image)[:,:,:]
         [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
-        flatGray = cm.rgb2flatGray(facePic)
         contrastMetrics = {
-            "hsMetric" : cm.hsMetric(flatGray),
-            "hfmMetric" : cm.hfmMetric(flatGray),
+            "leftEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+                },
+            "rightEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+                },
+            "face" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+                }
         }
         return json.dumps(contrastMetrics)
         
@@ -133,20 +153,36 @@ class dataCollect:
             file.write(web.input().faceFeatures)
             file.close() 
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
-        flatGray = cm.rgb2flatGray(facePic)
+
+        contrastMetrics = {
+            "leftEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+                },
+            "rightEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+                },
+            "face" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+                },
+        }
+
         file = open(savePath + subfolderPath + '/coordsList.txt','a+')
         saveData = {
             "currentPosition" : str(currentPosition),
             "coords" : output,
             "perimeterPercent" : web.input().perimeterPercent,
             "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
-            "hsMetric" : cm.hsMetric(flatGray),
-            "hfmMetric" : cm.hfmMetric(flatGray),
+            "contrastMetrics" : contrastMetrics,
             "isRingLight" : web.input().isRingLight,
             "isFullScreen" : web.input().isFullScreen,
             "modelDuration" : modelDuration,
             "totalDuration" : time.time() - startCaptureTime,
             "aspectDim" : web.input().aspectDim,
+            "faceWidth" : features["face"][3],
+            "eyeWidth" : features["leftEye"][3],
             }
         file.write(json.dumps(saveData) + '\n')
         file.close()

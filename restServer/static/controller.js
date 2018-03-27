@@ -34,7 +34,8 @@ let CONTROLLER = {
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
     getTrialStatsURL: "/getTrialStats",
-    contrastMetricURl: "/getContrastMetric",
+    contrastMetricURL: "/getContrastMetric",
+    predictionPlotURL: "/getPredictionPlot",
 
     cancelDataCollectURL: "/cancelDataCollect",
 
@@ -103,6 +104,7 @@ let CONTROLLER = {
                             }
                             if(CONTROLLER.isDone){
                                 DISPLAY.showTrialStats();
+                                CONTROLLER.getPredictionPlot();
                             }
                         });
                     }else{
@@ -189,6 +191,7 @@ let CONTROLLER = {
 			alert("This trial is done!");
             CONTROLLER.exitFullScreen();
             DISPLAY.showTrialStats();
+            CONTROLLER.getPredictionPlot();
 		}else{
 
             let newStep = new Promise((resolve, reject) =>{
@@ -396,12 +399,13 @@ let CONTROLLER = {
 
     getContrastMetric: () => {
         let method = "GET";
-        let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURl;
+        let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURL;
         let data = CONTROLLER.getSaveData(-1, -1);
         CONTROLLER.getRequest(method, url, data).then((metrics) =>{
             metricsJSON = JSON.parse(metrics);
-            console.log("Histogram Spread: " + metricsJSON['hsMetric'])
-            console.log("Histogram Flatness: " + metricsJSON['hfmMetric'])
+            console.log("Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")");
+            console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
+            console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
         });
     },
 
@@ -433,6 +437,19 @@ let CONTROLLER = {
                 error: function(exception){
                   reject(exception);
                 }
+            });
+        });
+    },
+
+    getPredictionPlot: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.predictionPlotURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                document.getElementById('predictionPlot').src = 'data:image/png;base64,' + jsonS
             });
         });
     },
