@@ -16,7 +16,7 @@ def setUp(subfolderPath):
 	# for numOfPics: since we are ignoring photo (0) we get +1 num of photos we are going to prcess and therefore this works for range(start,<) 
 
 	home = os.path.expanduser("~")
-	dir_path = os.path.dirname(os.path.realpath(__file__))
+#	dir_path = os.path.dirname(os.path.realpath(__file__))
 	dataPath = "./myData/rawData" + '/' + subfolderPath
 	savePath = './myData/' + subfolderPath
 

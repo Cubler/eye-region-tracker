@@ -44,10 +44,6 @@ $(document).ready(() => {
         CONTROLLER.startTracking();
     });
 
-    $('#getEdges').click(()=>{
-        DISPLAY.showEdges();
-    });
-
     $('#getEdgeMetric').click(()=>{
         MODEL.getEdgeMetric();
     });

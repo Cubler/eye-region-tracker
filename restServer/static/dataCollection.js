@@ -1,5 +1,11 @@
 $(document).ready(() => {
 
+    trialToPerimPercent = {
+        "1": 0.7,
+        "2": 1.0,
+        "3": 0.5,
+    }
+
     // Event Listeners 
     //document.getElementById('getPos').addEventListener("click", CONTROLLER.capture);
     //document.getElementById('trackButton').addEventListener("click", CONTROLLER.startSimonSays);
@@ -8,40 +14,12 @@ $(document).ready(() => {
     //document.getElementById('cancelTrack').addEventListener("click", CONTROLLER.cancelButtonMethod);
     //document.getElementById('getCenter').addEventListener("click", CONTROLLER.getCenter);
 
-    $('#getSequence').click(function() {
-        CONTROLLER.getNewSequence();
-    });
-
     $('#getPos').click(function() {
         CONTROLLER.capture();
     });
    
-     $('#trackButton').click(function() {
-        CONTROLLER.startSimonSays();
-    });
-
-    $('#getUserSequence').click(function() {
-        CONTROLLER.getUserFeedbackCoords(-1);
-    });
-
     $('#cancelTrack').click(function() {
         CONTROLLER.cancelButtonMethod();
-    });
-
-    $('#getCenter').click(function() {
-        CONTROLLER.getCenter();
-    });
-
-    $('#downloadLink').click(() => {
-        CONTROLLER.downloadPhoto($('#downloadLink')[0]);
-    });
-
-    $('#stopTracking').click(()=>{
-        CONTROLLER.stopTracking();
-    });
-
-    $('#startTracking').click(()=>{
-        CONTROLLER.startTracking();
     });
 
     $('#getEdges').click(()=>{
@@ -54,12 +32,28 @@ $(document).ready(() => {
 
     $('#collectData').click(()=>{
         window.location.href='#animationCanvas'
-        perimPerc = parseFloat(document.getElementById('perimeterPercent').value)/10;
-        CONTROLLER.collectData(perimPerc);
+        trial = document.getElementById("trialNum").value
+        pp = trialToPerimPercent[trial]
+        CONTROLLER.collectData(pp);
     });
 
     $(window).resize(function(){
         DISPLAY.resizeCanvas();
+    });
+
+    // Modal code adapted from https://www.w3schools.com/howto/howto_css_modal_images.asp
+    var modal = document.getElementById('myModal');
+    var img = document.getElementById('myImg');
+    var modalImg = document.getElementById("img01");
+    var captionText = document.getElementById("caption");
+
+    $('.thumbnail').click((event)=>{
+        modal.style.display = "block";
+        modalImg.src = event.target.src;
+        captionText.innerHTML = event.target.alt;
+    });
+    $('.close').click(()=>{
+        modal.style.display = "none";
     });
 
 });

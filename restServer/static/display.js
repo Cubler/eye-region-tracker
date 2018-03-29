@@ -113,7 +113,7 @@ let DISPLAY = {
 		DISPLAY.offset = window.innerWidth * 0.02;
 		DISPLAY.xoffset = (window.innerWidth-50)/2-DISPLAY.offset;
    		DISPLAY.xstart = (window.innerWidth-50)/2;
-	    DISPLAY.yoffset = window.innerHeight*0.4;
+	    DISPLAY.yoffset = window.innerHeight*0.45;
 		DISPLAY.ystart = DISPLAY.yoffset + DISPLAY.offset;
 
         DISPLAY.animationContext.canvas.width = window.innerWidth-50;
@@ -230,6 +230,15 @@ let DISPLAY = {
     // Writes the provided sequence into the sequence element so the current sequence is viewable to users.
     showSequenceText: (sequence) => {
         document.getElementById('sequence').value = sequence.toString();
+    },
+
+    showTrialStats: () => {
+        CONTROLLER.getTrialStats().then((stats) => {
+            resultString = "quadrantAccuracy: " + stats['quadrantAccuracy'].toFixed(2) + '\n' +
+            "eyeMetricAverage: " + stats['eyeMetricAverage'][0].toFixed(2) + 
+            ", " + stats['eyeMetricAverage'][1].toFixed(2) + '\n'
+            document.getElementById('coordsList').value = resultString;
+        });
     },
 
     // Initializes all variables referring to HTML elements that are needed for Display.js

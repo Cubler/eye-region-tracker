@@ -2,9 +2,13 @@
 
 import web
 import runModel
+import processRectData
+import contrastMetrics as cm
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
 import myInputSetUp
 from web.wsgiserver import CherryPyWSGIServer
+from cheroot.server import HTTPServer
+from cheroot.ssl.builtin import BuiltinSSLAdapter
 import os
 import time
 import json
@@ -19,6 +23,7 @@ import re
 import numpy as np 
 from skimage import exposure
 from skimage import io as imageIO 
+import StringIO
 
 urls = (
     '/', 'index',
@@ -30,11 +35,19 @@ urls = (
     '/feedback', 'feedback',
     '/eyeTrainer', 'eyeTrainer',
     '/getCoordsFast', 'getCoordsFast',
-    '/models/mean_images/mean_face_224.binaryproto', 'mean_face',
+    '/cancelDataCollect', 'cancelDataCollect',
+    '/getTrialStats', 'getTrialStats',
+    '/simonSays', 'simonSays',
+    '/getContrastMetric', 'getContrastMetric',
+    '/getPredictionPlot', 'getPredictionPlot',
 )
 
-CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
-CherryPyWSGIServer.ssl_private_key = "./ssl/myserver.key"
+CherryPyWSGIServer.ssl_certificate = "./ssl/comp158_cs_unc_edu_cert.cer"
+CherryPyWSGIServer.ssl_private_key = "./ssl/comp158_cs_unc_edu.key"
+
+#HTTPServer.ssl_adapter = BuiltinSSLAdapter(
+#    certificate = './ssl/myserver.crt',
+#    private_key = './ssl/myserver.key')
 
 render = web.template.render('templetes/',)
 
@@ -56,6 +69,10 @@ class feedback:
     def GET(self):
         return render.feedback(self)
 
+class simonSays:
+    def GET(self):
+        return render.simonSays(self)
+
 class eyeTrainer:
     def GET(self):
         return render.eyeTrainer(self)
@@ -68,6 +85,46 @@ class start:
              subPath += 1
 
         return subPath
+
+class getTrialStats:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        return statsString           
+
+class getPredictionPlot:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        output = StringIO.StringIO()
+        canvas.print_png(output)
+        #fig.savefig(response, format='png')
+        return base64.b64encode(output.getvalue())
+
+class getContrastMetric:
+    def GET(self):
+        url = web.input().imgBase64
+        imgstr = re.search(r'base64,(.*)',url).group(1)
+        imageBytes = io.BytesIO(base64.b64decode(imgstr))
+        image = Image.open(imageBytes)
+        imageArray = np.array(image)[:,:,:]
+        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        contrastMetrics = {
+            "leftEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+                },
+            "rightEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+                },
+            "face" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+                }
+        }
+        return json.dumps(contrastMetrics)
+        
 
 class dataCollect:
     def GET(self):
@@ -85,31 +142,47 @@ class dataCollect:
         modelDuration = time.time() - modelStartTime
 
         rawSubPath = 0
-        subfolderPath = web.ctx['ip'] + '/' + web.input().saveSubPath
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
         currentPosition = float(web.input().currentPosition)
         features = json.loads(web.input().faceFeatures)
-
+                # Saves 5 of the picture captures so they can be analysed later if need be
         while(checkForDir(savePath + subfolderPath + '/' + str(rawSubPath)) and (rawSubPath <= 5)):
             rawSubPath += 1
-
         if(rawSubPath < 5):
             file = open(savePath + subfolderPath + '/' + str(rawSubPath) +  '/faceFeatures.json','w+')
             file.write(web.input().faceFeatures)
             file.close() 
-
             imageIO.imsave(savePath + subfolderPath + '/' + str(rawSubPath) +  '/wholeFace.jpg' ,image)        
-       
+
+        contrastMetrics = {
+            "leftEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+                },
+            "rightEye" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+                },
+            "face" : {
+                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+                },
+        }
+
         file = open(savePath + subfolderPath + '/coordsList.txt','a+')
         saveData = {
             "currentPosition" : str(currentPosition),
             "coords" : output,
             "perimeterPercent" : web.input().perimeterPercent,
             "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "contrastMetrics" : contrastMetrics,
             "isRingLight" : web.input().isRingLight,
             "isFullScreen" : web.input().isFullScreen,
             "modelDuration" : modelDuration,
             "totalDuration" : time.time() - startCaptureTime,
             "aspectDim" : web.input().aspectDim,
+            "faceWidth" : features["face"][3],
+            "eyeWidth" : features["leftEye"][3],
             }
         file.write(json.dumps(saveData) + '\n')
         file.close()
@@ -120,6 +193,16 @@ class dataCollect:
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
 
+class cancelDataCollect:
+    def GET(self):
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        shutil.rmtree(savePath + subfolderPath)
+        os.removedirs(savePath + web.ctx['ip'] + '/' + web.input().saveSubPath)
+#        file = open(savePath + subfolderPath + '/canceled.txt','w')
+#        file.write("Canceled")
+#        file.close()
+
+        
 
 class getCoordsFast:
     def GET(self):

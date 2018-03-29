@@ -13,51 +13,244 @@ $def with (page)
   <script src="./static/tracking.js/src/alignment/training/Landmarks.js"></script>
   <script src="./static/tracking.js/src/alignment/training/Regressor.js"></script>
 
-  <script src="./static/faceCapture.js" type="text/javascript"></script>
+  <script src="./static/display.js" type="text/javascript"></script>
+  <script src="./static/tracker.js" type="text/javascript"></script>
+  <script src="./static/controller.js" type="text/javascript"></script>
+  <script src="./static/model.js" type="text/javascript"></script>
+  <script src="./static/dataCollection.js" type="text/javascript"></script>
+
     <link rel='stylesheet' href='./static/style.css'>
-  
+  <style>
+body {font-family: Arial, Helvetica, sans-serif;}
+
+#myImg {
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#myImg:hover {opacity: 0.7;}
+
+/* The Modal (background) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.9); /* Black w/ opacity */
+}
+
+/* Modal Content (image) */
+.modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+}
+
+/* Caption of Modal Image */
+#caption {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    text-align: center;
+    color: #ccc;
+    padding: 10px 0;
+    height: 150px;
+}
+
+/* Add Animation */
+.modal-content, #caption {    
+    -webkit-animation-name: zoom;
+    -webkit-animation-duration: 0.6s;
+    animation-name: zoom;
+    animation-duration: 0.6s;
+}
+
+.caption {
+	float: left;
+	width: 16%;
+}
+
+.resultCaption {
+  float: left;
+  width: 31%;
+}
+
+@-webkit-keyframes zoom {
+    from {-webkit-transform:scale(0)} 
+    to {-webkit-transform:scale(1)}
+}
+
+@keyframes zoom {
+    from {transform:scale(0)} 
+    to {transform:scale(1)}
+}
+
+/* The Close Button */
+.close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* 100% Image Width on Smaller Screens */
+@media only screen and (max-width: 700px){
+    .modal-content {
+        width: 100%;
+    }
+}
+</style>
 </head>
 <body>
   <div class="view-frame">
       <video id="video" width="320" height="240" preload autoplay loop muted></video>
 
-      <canvas id="canvas" width="320" height="240"></canvas>
+      <canvas id="videoCanvas" width="320" height="240"></canvas>
   </div>
 
+ 
   <div id="instructions"><p>
    <b>Instructions:</b> <br>
+<b>0)</b> Allow your camera to be use.
 <b>1)</b> The task is to look at the black dot as it traverses around the screen. It must be done on a laptop or monitor with a webcam, no smartphones please.<br>
-<b>2)</b> Maximize your browser window so the black box stretches across your whole monitor. <br>
-<b>3)</b> (Important) Make sure your face is entirely within the picture and it is <b>well lit</b>.<br>
-<b>4)</b> Adjust lighting and positioning in order for your face to be detected. Dots and boxes will appear when there is a detection.  <br>
-<b>5)</b> When ready, press the start button and your screen will center on the first black dot. It will take about 5 seconds to start moving. Once it does, follow the dot as naturally as possible. <br>
-<b>6)</b> After three revolutions the tracking will stop and the task is complete. <br>
-<b>8)</b> (Bonus Points) One trial is nice. Two trials is twice as nice. If inclined, use different lighting setups and record at different distances! <br>
-<b>9)</b>  Thank You!
+<b>2)</b> (Important) Make sure your face is entirely within the frame and it is <b>well lit</b>.<br>
+<b>3)</b> Adjust lighting and positioning in order for your face to be detected. Detection will occur well before optimal lighting for gaze prediction so please see guidelines below.  <br>
+<b>4)</b> When ready, select the trial number you are on and press the Start button. Your window will fullscreen around the first black dot. Follow the dot as naturally as possible. <br>
+<b>5)</b> If you end up getting distracted and not following the dot, you can press the Cancel button and restart at anytime. <br>
+<b>5)</b> After three revolutions the tracking will stop and the round will be complete. It will take about 90 seconds.<br>
+<b>6)</b> The rounds differ in how far from the edge of screen the dot traverses. There are 3 trials and you may repeat each of them as many times as you would like. <br>
+<b>7)</b> Please complete all 3 trials (They only take 90 seconds). <br>
+<b>8)</b> After each trail, the accuracy of the system and a plot of the predictions will be reported at the bottom of the page. Check it out! If you have good lighting, trials 1 and 2 should be easily above 80%, with it not unlucky to get 100%.<br> 
+<b>9)</b> Thank You!
   <p>
   </div>
 
-  </div class = "save-frame">
-    <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
-    <canvas id="save" width="640" height="426"></canvas>
+  <div id="myModal" class="modal">
+	  <span class="close">&times;</span>
+	  <img class="modal-content" id="img01">
+	  <div id="caption"></div>
   </div>
-  
-  <input type="number" id="positionChoice" min="0" max="4">
-  <button id="getPos" >Get Position</button>
-  <button id="trackButton" onclick= "window.location.href='#circleCanvas'">Start</button>
-  <button id="cancelTrack" >Cancel Track</button>
 
-  <div class="circleTrack">
-    <canvas id="circleCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
-    
+  <div id="guidelines"><p>
+  <b> Lighting and Positioning Guidelines for Gaze Prediction </b> <br>
+  <b>1)</b> Make sure your eyes are not shadowed and there are no bright lights or artifacts in the background. <br>
+  <b>2)</b> Position your camera so you are directly facing it. <br>
+  <b>3)</b> Use the edge metric tool to test your environment. Boxes should align around your eyes consistently and your irises should be marked by white circles. <br>
+  <b>4)</b> Below are some examples of good and bad setups and their reasons why. Click the thumbnails to enlarge and see the description. <br>
+  <b>5)</b> Lighting is the most important factor for performance so please take a minute to setup a good environment. <br>
+  <p>
+
+
+  </div>
+
+<div id = "picsContainer">
+	<b> Lighting Examples</b> <br>
+  	<div id="pics">
+      <img class="thumbnail" id="goodPic" src="./static/lightingPics/good.jpg" width = "15%" height="20%" alt="Good contrast, no shadows.">
+      <img class="thumbnail" id="goodPic2" src="./static/lightingPics/good3.jpg" width = "15%" height="20%" alt="Example of optimal Eye Edge Metric positioning and detail.">
+      <img class="thumbnail" id="badPic" src="./static/lightingPics/bad.jpg" width = "15%" height="20%" alt="Too dark and the face is shadowed.">
+      <img class="thumbnail" id="badPic" src="./static/lightingPics/bad2.jpg" width = "15%" height="20%" alt="Face and background are too washed out. They lack enough contrast and the eyes are shadowed.">
+    </div>
+    <div class="captionContainer">
+	  <div class="caption" id="caption1">
+	  	Good Contrast, no shadows
+	  </div>
+	  <div class="caption" id="caption2">
+	  	Good Eye Edge Metric 
+	  </div>
+	  <div class="caption" id="caption3">
+	  	Too Much Shadowing
+	  </div>
+	  <div class="caption" id="caption4">
+	  	Too Washed Out
+	  </div>
+	</div>
+  </div>
+
+
+
+  <div class = "save-frame">
+    <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
+    <canvas id="saveCanvas" width="640" height="426"></canvas>
+  </div>
+
+  <br>
+  <div id = "input">  
+    Trial Number: <input type="number" id="trialNum" min="1" max="3" value="1">
+    <button id="collectData"> Start </button>
+    <button id="cancelTrack" >Cancel</button>
+    <button id="getEdgeMetric">Get Edge Metric</button>
+    Eye Edge Average: <input type="text" id="edgeMetric">
+    RingLightSetting: <input type="number" id="ringLightSetting" min="0" max="10" value="0">
+  </div>
+
+  <div class="animation">
+    <canvas id="animationCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
+  </div>
 <br>
-<textarea id="coords" rows="4" cols="50">
-"Original Text"
-</textarea>
 <textarea id="coordsList" rows="4" cols="50">
 "Original Text"
 </textarea>
-<!--  <a id="downloadLnk" href="capturedFaces/"  download="wholeFace.jpg">Download as image</a> -->
+    
+<br>
+
+<div id = "resultsContainer">
+
+  <div id = "resultGraphs">
+    <img class="thumbnail" id="predictionPlot" src="" width = "30%" height="40%" alt="User's Trial Graph">
+    <img class="thumbnail" id="BestPlot" src="./static/tightPlot.jpeg" width = "30%" height="40%" alt="Tight Grouping Graph">
+  </div>
+  <div class="captionContainer">
+    <div class="resultCaption">
+      Your Results
+    </div>
+    <div class="resultCaption">
+      Optimal Results
+    </div>
+  </div>
+</div>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<audio id="audio1" src="./static/audio/High_Right_G.mp3" autostart = "false"></audio>
+<audio id="audio2" src="./static/audio/High_Left_B.mp3" autostart = "false"></audio>
+<audio id="audio3" src="./static/audio/Low_Left_B.mp3" autostart = "false"></audio>
+<audio id="audio4" src="./static/audio/Low_Right_G.mp3" autostart = "false"></audio>
+<audio id="default" src="https://www.soundjay.com/button/beep-22.mp3" autostart = "false"></audio>
 
 
 $:page

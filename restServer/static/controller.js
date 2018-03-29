@@ -18,6 +18,7 @@ let CONTROLLER = {
     eps: 0.00001,
 
     isCanceled: false,
+    isDone: false,
     isRingLight: 0,
 
     // The change in score for a miss and a hit respectively 
@@ -32,6 +33,11 @@ let CONTROLLER = {
 
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
+    getTrialStatsURL: "/getTrialStats",
+    contrastMetricURL: "/getContrastMetric",
+    predictionPlotURL: "/getPredictionPlot",
+
+    cancelDataCollectURL: "/cancelDataCollect",
 
     saveSubPath: null,
     saveFullSubPath: null,
@@ -39,10 +45,22 @@ let CONTROLLER = {
 
 	// The server URL to send requests to
 	serverURL: "https://localhost:3000",
-
+//    serverURL: "https://comp158.cs.unc.edu:8080",
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
+        CONTROLLER.exitFullScreen();
+    },
+
+    cancelDataCollectRequest: () => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.cancelDataCollectURL;
+        let data = {
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
+            saveSubPath: CONTROLLER.saveSubPath,
+            saveRoundNum: CONTROLLER.saveRoundNum.toString(),
+        };
+        CONTROLLER.getRequest(method, url, data);
     },
 
     // Preforms a one time request to get and show coordinates from the server.
@@ -78,6 +96,16 @@ let CONTROLLER = {
                         numCaptures += 1;
                         let data = CONTROLLER.getSaveData(point, perimeterPercent);
                         CONTROLLER.getRequest(method, url, data).then((coords) => {
+                            if(CONTROLLER.isCanceled){
+                                CONTROLLER.cancelDataCollectRequest();
+                                clearTimeout(captureTimeout);
+                                resolve()
+                                return;
+                            }
+                            if(CONTROLLER.isDone){
+                                DISPLAY.showTrialStats();
+                                CONTROLLER.getPredictionPlot();
+                            }
                         });
                     }else{
                         clearTimeout(captureTimeout);
@@ -88,7 +116,11 @@ let CONTROLLER = {
         }else{
             return new Promise((resolve, reject) => {
                 let data = CONTROLLER.getSaveData(point, perimeterPercent);
-                CONTROLLER.getRequest(method, url, data)
+                CONTROLLER.getRequest(method, url, data).then(() => {
+                    if(CONTROLLER.isCanceled){
+                        CONTROLLER.cancelDataCollectRequest();
+                    }
+                });
                 resolve()
             });
         }
@@ -106,13 +138,13 @@ let CONTROLLER = {
     	CONTROLLER.debouncerArray = [];
     },
 
-	collectData: () => {
+	collectData: (perimeterPercent = 0.7) => {
 		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
         CONTROLLER.isCanceled = false;
+        CONTROLLER.isDone = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
-		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
-        let isFullScreenConfirm = confirm("I'd like to go full screen please")
+        let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
         } 
@@ -149,13 +181,17 @@ let CONTROLLER = {
         } 
 
         if(CONTROLLER.isCanceled){
+            CONTROLLER.cancelDataCollectRequest();
             return;
         }
 
 		if(revCounter > numOfRev){
 			// End
-			alert("Done");
-            CONTROLLER.exitFullscreen();
+            CONTROLLER.isDone = true;
+			alert("This trial is done!");
+            CONTROLLER.exitFullScreen();
+            DISPLAY.showTrialStats();
+            CONTROLLER.getPredictionPlot();
 		}else{
 
             let newStep = new Promise((resolve, reject) =>{
@@ -361,6 +397,18 @@ let CONTROLLER = {
         });
     },
 
+    getContrastMetric: () => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURL;
+        let data = CONTROLLER.getSaveData(-1, -1);
+        CONTROLLER.getRequest(method, url, data).then((metrics) =>{
+            metricsJSON = JSON.parse(metrics);
+            console.log("Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")");
+            console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
+            console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
+        });
+    },
+
     getDebounceProgress: (array) => {
     	let count = array.map(CONTROLLER.checkConsistent).lastIndexOf(false);
     	if(count == -1){
@@ -393,6 +441,19 @@ let CONTROLLER = {
         });
     },
 
+    getPredictionPlot: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.predictionPlotURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                document.getElementById('predictionPlot').src = 'data:image/png;base64,' + jsonS
+            });
+        });
+    },
+
     getSaveData: (point, perimeterPercent) => {
         let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
@@ -403,14 +464,28 @@ let CONTROLLER = {
             imgBase64: DISPLAY.getPicToDataURL(),
             faceFeatures: featuresString,
             currentPosition: point,
-            saveSubPath: CONTROLLER.saveFullSubPath,
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
             perimeterPercent: perimeterPercent,
             isRingLight: document.getElementById('ringLightSetting').value,
             isFullScreen: (!window.screenTop && !window.screenY),
-            aspectDim: [window.innerHeight, window.innerWidth],
+            aspectDim: [window.innerHeight, window.innerWidth].toString(),
         };
 
         return data;
+    },
+
+    getTrialStats: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.getTrialStatsURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                stats = JSON.parse(jsonS);
+                resolve(stats);
+            });
+        });
     },
 
     // Starts a new UserFeedback session for a given round.
@@ -585,7 +660,7 @@ let CONTROLLER = {
         $(document).on('webkitfullscreenchange mozfullscreenchange fullscreenchange', function(e){
             CONTROLLER.goToAnimationCanvas();
         });
-
+        CONTROLLER.serverURL = window.location.href.substring(0,window.location.href.indexOf(window.location.pathname));
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");
