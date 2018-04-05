@@ -1,7 +1,8 @@
 
 let GAZEMODEL = {
 
-	image : new ImgJS.Image(),
+	// image : new ImgJS.Image(),
+    image: null, 
 
 	meanImages : {
 		"image_left" : null,
@@ -201,7 +202,7 @@ let GAZEMODEL = {
 }
 
 $(document).ready(() => {
-    GAZEMODEL.setup();
+//    GAZEMODEL.setup();
 });
 
 
