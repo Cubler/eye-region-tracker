@@ -308,5 +308,9 @@ let MODEL = {
         DISPLAY.displayScore(MODEL.score);
     },
 
+    clearScore: () => {
+        MODEL.score = 0;
+    },
+
 }
 

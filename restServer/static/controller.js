@@ -5,6 +5,7 @@ let CONTROLLER = {
 
 	// Length of the debouncer sequence needed for the confirm decision
     confirmLength: 5,
+    feedbackDebounceLength: 5,
 
     // Array used to buffer the estimated quadrants when 
     // determining if predictions have been consistent.
@@ -323,6 +324,7 @@ let CONTROLLER = {
     },
 
     getCenter: () => {
+        MODEL.centerList = [];
     	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
     		DISPLAY.drawRectPoint(0);
     		CONTROLLER.getCenterRequests().then(() => {
@@ -398,15 +400,24 @@ let CONTROLLER = {
     },
 
     getContrastMetric: () => {
-        let method = "GET";
-        let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURL;
-        let data = CONTROLLER.getSaveData(-1, -1);
-        CONTROLLER.getRequest(method, url, data).then((metrics) =>{
-            metricsJSON = JSON.parse(metrics);
-            console.log("Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")");
-            console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
-            console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
+        return new Promise ((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURL;
+            let data = CONTROLLER.getSaveData(-1, -1);
+            CONTROLLER.getRequest(method, url, data).then((metrics) =>{
+                metricsJSON = JSON.parse(metrics);
+                let outputString = "Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")\n" +
+                  "Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")\n" + 
+                  "Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")";
+
+                console.log("Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")");
+                console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
+                console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
+
+                resolve(outputString);
+            });
         });
+
     },
 
     getDebounceProgress: (array) => {
@@ -492,7 +503,7 @@ let CONTROLLER = {
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 2;
+        CONTROLLER.debouncerLength = parseInt($('#debouncerLength').val());
         CONTROLLER.isCanceled = false;
     	CONTROLLER._getUserFeedbackCoords(round, true, -1);
     },
@@ -708,6 +719,7 @@ let CONTROLLER = {
 
     // Called when the user decides to start the game. Starts a new SimonSays game
     startSimonSays: () => {
+        MODEL.clearScore();
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
         MODEL.setNewSequence(maxSeqLen);
         CONTROLLER.triggerRoundComplete(0);

@@ -50,6 +50,9 @@ $(document).ready(() => {
 
     $('#getEdgeMetric').click(()=>{
         MODEL.getEdgeMetric();
+        CONTROLLER.getContrastMetric().then((outputString)=> {
+            document.getElementById('coordsList').value = outputString;
+        });
     });
 
     $('#collectData').click(()=>{
