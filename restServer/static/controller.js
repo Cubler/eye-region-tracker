@@ -6,6 +6,7 @@ let CONTROLLER = {
 	// Length of the debouncer sequence needed for the confirm decision
     confirmLength: 5,
     feedbackDebounceLength: 5,
+    aSDebounceLen: 5,
 
     // Array used to buffer the estimated quadrants when 
     // determining if predictions have been consistent.
@@ -45,8 +46,8 @@ let CONTROLLER = {
     saveRoundNum: 0,
 
 	// The server URL to send requests to
-	serverURL: "https://localhost:3000",
-//    serverURL: "https://comp158.cs.unc.edu:8080",
+//	serverURL: "https://localhost:3000",
+    serverURL: "https://comp158.cs.unc.edu:8080",
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
@@ -704,7 +705,7 @@ let CONTROLLER = {
     startActionSelect: () => {
         DISPLAY.drawActionPics();
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 4;
+        CONTROLLER.debouncerLength = CONTROLLER.aSDebounceLen;
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },

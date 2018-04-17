@@ -83,22 +83,23 @@ def run(subfolderPath):
         transformer.set_transpose('image_left', (2,0,1))
         transformer.set_transpose('image_right', (2,0,1))
         transformer.set_transpose('image_face', (2,0,1))
+#        transformer.set_transpose('facegrid', (2,0,1))
 
         if(len(jpgNames) != 1):
             faceGridInput = faceGridData[i]
             i += 1
         else:
             faceGridInput = faceGridData
-
+        '''
         imLeft = resizeImage(imLeft,[224,224])
         imRight = resizeImage(imRight,[224,224])
         imFace = resizeImage(imFace,[224,224])
-
+        '''
         #Load images into input layer
         net.blobs['image_left'].data[...]= transformer.preprocess('image_left',imLeft)
         net.blobs['image_right'].data[...]= transformer.preprocess('image_right',imRight)
         net.blobs['image_face'].data[...]= transformer.preprocess('image_face',imFace)
-        net.blobs['facegrid'].data[...]= transformer.preprocess('facegrid',np.reshape(np.array(faceGridInput),(1,1,625)))
+        net.blobs['facegrid'].data[...]= transformer.preprocess('facegrid',np.reshape(np.array(faceGridInput),(625,1,1)))
         s=time.time()
 
         print('Processing...')
