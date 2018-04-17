@@ -189,8 +189,8 @@ let MODEL = {
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
         [wholeImage, imageLeft, imageRight, imageFace] = MODEL.getModelPics(features);
         let faceGrid = MODEL.createFaceGridFromBox(wholeImage, features['face'], features['faceGridPoints']);
-        [imageLeft, imageRight, imageFace] = [MODEL.reshapeImageData(imageLeft),
-         MODEL.reshapeImageData(imageRight), MODEL.reshapeImageData(imageFace)]
+        // [imageLeft, imageRight, imageFace] = [MODEL.reshapeImageData(imageLeft),
+         // MODEL.reshapeImageData(imageRight), MODEL.reshapeImageData(imageFace)]
         return [imageLeft, imageRight, imageFace, faceGrid]
     },
 
