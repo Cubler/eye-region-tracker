@@ -189,6 +189,8 @@ let MODEL = {
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
         [wholeImage, imageLeft, imageRight, imageFace] = MODEL.getModelPics(features);
         let faceGrid = MODEL.createFaceGridFromBox(wholeImage, features['face'], features['faceGridPoints']);
+        // [imageLeft, imageRight, imageFace] = [MODEL.reshapeImageData(imageLeft),
+         // MODEL.reshapeImageData(imageRight), MODEL.reshapeImageData(imageFace)]
         return [imageLeft, imageRight, imageFace, faceGrid]
     },
 
@@ -198,6 +200,26 @@ let MODEL = {
         let imageRight = DISPLAY.saveContext.getImageData.apply(DISPLAY.saveContext, features['rightEye']);
         let imageFace = DISPLAY.saveContext.getImageData.apply(DISPLAY.saveContext, features['face']);
         return [wholeImage, imageLeft, imageRight, imageFace]
+    },
+
+    reshapeImageData: (imageData, size=224) => {
+        if(imageData.width != imageData.height){
+            console.log("imageData needs to be square");
+            return;
+        }
+        scaleUp = size / imageData.width;
+        let tmpCanvas = $("<canvas>")
+            .attr("width", imageData.width)
+            .attr("height", imageData.height)[0];
+        tmpCanvas.getContext("2d").putImageData(imageData,0,0);
+
+        let scaledCanvas = $("<canvas>")
+            .attr("width", size)
+            .attr("height", size)[0];
+        scaledCanvas.getContext("2d").scale(scaleUp,scaleUp);
+        scaledCanvas.getContext("2d").drawImage(tmpCanvas,0,0)
+        return scaledCanvas.getContext("2d").getImageData(0,0,size,size);
+
     },  
 
     createFaceGridFromBox: (wholeFace, faceBox, fgpts) => {
@@ -284,6 +306,10 @@ let MODEL = {
     updateScore: (scoreChange) => {
         MODEL.score += scoreChange;
         DISPLAY.displayScore(MODEL.score);
+    },
+
+    clearScore: () => {
+        MODEL.score = 0;
     },
 
 }

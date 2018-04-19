@@ -30,7 +30,15 @@ $def with (page)
   </div>
 
   <div id="instructions"><p>
-   <b>Instructions:</b> <br>
+   <b>Guide :</b> <br>
+   The best practice is to work through the top row of buttons from left to right. <br>
+   <b>Start Tracking:</b> (Required) Turns on the face tracking software so the user can be found within the pictures.  <br>
+   <b>Get Edge Metric:</b> Used to judge the quality of the lighting environment. Metrics reported at the bottom of the page.<br>
+<b>Collect Data:</b> Takes you to the data collection page to showcase offline processing. <br>
+<b>Get Center:</b> (Required) Shows a point in the center of the screen and calibrates the system for that point. <br>
+<b>Sequence Length:</b> Set the length of the maximum sequence for Simon Says <br>
+<b>Start Simon Says:</b> Starts Simon Says<br>
+
   <p>
   </div>
 
@@ -39,25 +47,36 @@ $def with (page)
     <canvas id="saveCanvas" width="640" height="426"></canvas>
   </div>
   
-  <input type="number" id="positionChoice" min="0" max="4" value="0">
-  <button id="getCenter" onclick= "window.location.href='#animationCanvas'">Get Center"</button> 
-  <button id="getPos" >Get Position</button>
-
-  Sequence Length:<input type="number" id="sequenceLength" min="1" max="10" value="3">
-  <button id="getSequence" >Get Sequence</button>
-  Sequence: <input type="text" id="sequence">
-  <button id="trackButton" onclick= "window.location.href='#animationCanvas'">Start Simon Says</button>
-  <button id="getUserSequence" onclick= "window.location.href='#animationCanvas'">Get User Sequence</button>
-  <button id="cancelTrack" >Cancel</button>
-  Score: <input type="text" id="score">
-  <button id="stopTracking">Stop Tracking</button>
+  <input type="number" id="positionChoice" min="0" max="4" value="0" style="display: none;">
   <button id="startTracking">Start Tracking</button>
-  <button id="getEdges">Get Edges</button>
   <button id="getEdgeMetric">Get Edge Metric</button>
+<button id="collectData" onclick= "window.location.href='https://comp158.cs.unc.edu:8080/dataCollection'"> Collect Data </button>  
+  <button id="getCenter" onclick= "window.location.href='#animationCanvas'">Get Center</button>
+
+  Sequence Length:<input type="number" id="sequenceLength" min="1" max="25" value="3">
+  <button id="trackButton" onclick= "window.location.href='#animationCanvas'">Start Simon Says</button> 
+  <button id="actionSelectionButton" onclick= "window.location.href='#animationCanvas'"> Action Selection </button> 
+  <button id="cancelTrack" >Cancel</button>
+  <button id="stopTracking">Stop Tracking</button>
+  Score: <input type="text" id="score">
+
+<br>
+  <button id="getPos">Get Position</button> 
+  <button id="getSequence" style="display: none;">Get Sequence</button>
+  Sequence: <input type="text" id="sequence">
+  
+  Debouncer Length:<input type="number" id="debouncerLength" min="1" max="10" value="3">
+  <button id="getUserSequence" onclick= "window.location.href='#animationCanvas'">Get User Sequence</button>
+  
+  
+  
+  
+  <button id="getEdges">Get Edges</button>
+  
   Eye Edge Average: <input type="text" id="edgeMetric">
-  <button id="collectData"> Collect Data </button>
-  PerimeterPercent: <input type="number" id="perimeterPercent" min="1" max="10" value="7">
-  RingLightSetting: <input type="number" id="ringLightSetting" min="0" max="10" value="0">
+  
+  <input type="number" id="perimeterPercent" min="1" max="10" value="7" style="display: none;">
+  <input type="number" id="ringLightSetting" min="0" max="10" value="0" style="display: none;">
 
 
   <div class="animation">

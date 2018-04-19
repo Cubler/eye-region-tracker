@@ -7,4 +7,5 @@
 caffejs/*
 static/models/*
 **/ssl
+run.py
 

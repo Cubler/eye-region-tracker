@@ -9,6 +9,8 @@ import json
 import numpy as np
 from PIL import Image
 import time
+from scipy.ndimage import zoom
+
 
 def run(subfolderPath):
     caffe.set_mode_gpu()
@@ -81,13 +83,18 @@ def run(subfolderPath):
         transformer.set_transpose('image_left', (2,0,1))
         transformer.set_transpose('image_right', (2,0,1))
         transformer.set_transpose('image_face', (2,0,1))
+#        transformer.set_transpose('facegrid', (2,0,1))
 
         if(len(jpgNames) != 1):
             faceGridInput = faceGridData[i]
             i += 1
         else:
             faceGridInput = faceGridData
-
+        '''
+        imLeft = resizeImage(imLeft,[224,224])
+        imRight = resizeImage(imRight,[224,224])
+        imFace = resizeImage(imFace,[224,224])
+        '''
         #Load images into input layer
         net.blobs['image_left'].data[...]= transformer.preprocess('image_left',imLeft)
         net.blobs['image_right'].data[...]= transformer.preprocess('image_right',imRight)
@@ -177,6 +184,11 @@ def setUpTransformer():
     transformer.set_transpose('image_face', (2,0,1))
 
     return transformer
+
+def resizeImage(im, new_dims):
+    scale = tuple(np.array(new_dims, dtype=float) / np.array(im.shape[:2]))
+    resized_im = zoom(im, scale + (1,), order=1)
+    return resized_im.astype(np.float32)
 
 
 modelsPath='./models'

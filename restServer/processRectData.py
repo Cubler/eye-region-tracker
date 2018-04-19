@@ -7,16 +7,19 @@ import matplotlib.patches as mpatches
 import sys
 import json
 import os
-import StringIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
-
-
 from mpl_toolkits.mplot3d import Axes3D
+
+try:
+    import StringIO
+except ImportError:
+    from io import StringIO
+
 
 allLabels = ["path", "lrAccuracy", "tbAccuracy", "quadrantAccuracy",
         "isRingLight", "isFullScreen", "perimeterPercent", "eyeMetricAverage", 
-        "centerCoord", "eNorms", "variances"]
+        "centerCoord", "eNorms", "variances", "hfmMetric", "hsMetric"]
 
 removeZerothPts = True
 circleData = []
@@ -24,19 +27,20 @@ dataFileName = "coordsList.txt"
 reportFileName = "coordReport.txt"
 
 def accuracyEdgeMetricReport(path, subpath):
-	global dataFileName
-	currentPath = path + subpath
-	if(dataFileName in os.listdir(currentPath)):
-		saveDataString = accuracyForFile(currentPath + '/' +  dataFileName)
-		file = open(path + '/' + reportFileName, 'a+')
-		file.write(saveDataString + '\n')
-		file.close()
-	else: 
-		for nextPath in os.listdir(currentPath):
-			accuracyEdgeMetricReport(path,subpath+'/'+nextPath)
+    global dataFileName
+    currentPath = path + subpath
+    if(dataFileName in os.listdir(currentPath)):
+        saveDataString = accuracyForFile(currentPath + '/' +  dataFileName)
+        file = open(path + '/' + reportFileName, 'a+')
+        file.write(saveDataString + '\n')
+        file.close()
+    else: 
+        for nextPath in os.listdir(currentPath):
+            if(os.path.isdir(path + subpath+'/'+nextPath)):
+                accuracyEdgeMetricReport(path,subpath+'/'+nextPath)
 
 def accuracyForFile(filePath):
-    (points, xNumpy, yNumpy, perimeterPercentNumpy, eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy) = readData(filePath);
+    (points, xNumpy, yNumpy, perimeterPercentNumpy, eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy, hsMetric, hfmMetric) = readData(filePath);
     [xCenter, yCenter] = getCenterCoords(xNumpy,yNumpy,points)
     xCentered = xNumpy - xCenter
     yCentered = yNumpy - yCenter
@@ -53,12 +57,21 @@ def accuracyForFile(filePath):
     	perimeterPercentValue = "null"
     else:
     	perimeterPercentValue = perimeterPercentNumpy[0]
+    
     if(len(eyeMetricNumpy) == 0):
     	eyeMetricAverageValue = "null"
     else:
     	xAvgMetric = np.mean([x[0] for x in eyeMetricNumpy])
     	yAvgMetric = np.mean([x[1] for x in eyeMetricNumpy])
     	eyeMetricAverageValue = [xAvgMetric, yAvgMetric]
+
+    if(len(eyeMetricNumpy) == 0):
+        eyeMetricAverageValue = "null"
+    else:
+        xAvgMetric = np.mean([x[0] for x in eyeMetricNumpy])
+        yAvgMetric = np.mean([x[1] for x in eyeMetricNumpy])
+        eyeMetricAverageValue = [xAvgMetric, yAvgMetric]
+
     if(len(isFullScreenNumpy) == 0):
     	isFullScreenValue = False;
     else:
@@ -83,6 +96,8 @@ def accuracyForFile(filePath):
         "centerCoord" : [xCenter, yCenter],
         "eNorms" : eNorms,
         "variances" : variances,
+        "hsMetric" : hsMetric,
+        "hfmMetric" : hfmMetric,
     }
 
     return json.dumps(saveData)
@@ -116,6 +131,8 @@ def averagePoints(xNumpy,yNumpy,points):
 
 	return (np.array(xAverage), np.array(yAverage), np.array(pointsAverage))
 
+def getContrastValue(metricDict):
+	return (metricDict['leftEye']+metricDict['rightEye'])
 
 def centerData(dNumpy):
 	dMean = np.mean(dNumpy)
@@ -192,7 +209,7 @@ def getCenterCoords(_x,_y,_p):
 
 def getCanvasFromCoordList(path):
     (points, xNumpy, yNumpy, perimeterPercentNumpy, \
-        eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy) = readData(path);
+        eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy, hsMetric, hfmMetric) = readData(path);
     (xNumpy, yNumpy, points) = cleanForPoints(xNumpy, yNumpy, points)
     xCentered = centerData(xNumpy)
     yCentered = centerData(yNumpy)
@@ -232,22 +249,35 @@ def getLabels(entryJSON, xLabel, yLabel, controlLabels, controlCondition, contro
 				controlValues = [controlValues]
 
 			if(satisfyControls(entryJSON, controlLabels, controlCondition, controlValues)):
-				xEntry = entryJSON[xLabel]
-				yEntry = entryJSON[yLabel]
+				if(isinstance(entryJSON[xLabel],dict)):
+					xEntry = getContrastValue(entryJSON[xLabel])
+				else:
+					xEntry = entryJSON[xLabel]
+				if(isinstance(entryJSON[yLabel],dict)):
+					yEntry = getContrastValue(entryJSON[yLabel])
+				else:
+					yEntry = entryJSON[yLabel]
+
+
 			# else:
 			# 	if(entryJSON[controlLabels]==controlValues):
 			# 		xEntry = entryJSON[xLabel]
 			# 		yEntry = entryJSON[yLabel]
 		else:
-			xEntry = entryJSON[xLabel]
-			yEntry = entryJSON[yLabel]
+			if(isinstance(entryJSON[xLabel],dict)):
+				xEntry = getContrastValue(entryJSON[xLabel])
+			else:
+				xEntry = entryJSON[xLabel]
+			if(isinstance(entryJSON[yLabel],dict)):
+				yEntry = getContrastValue(entryJSON[yLabel])
+			else:
+				yEntry = entryJSON[yLabel]
 		
 		if(average):
 			if(isinstance(xEntry, list)):
 				xEntry = np.mean(np.array(xEntry))
 			if(isinstance(yEntry, list)):
 				yEntry = np.mean(np.array(yEntry))
-
 		return (xEntry, yEntry)
 
 	except:
@@ -324,6 +354,16 @@ def readData(path):
 	eyeMetricList = []
 	isRingLightList = []
 	isFullScreenList = []
+	hsMetricList = {
+		"leftEye": [],
+		"rightEye": [],
+		"face": []
+	}
+	hfmMetricList = {
+		"leftEye": [],
+		"rightEye": [],
+		"face": []
+	}
 	
 	try: 
 		data = json.load(open(path))
@@ -351,6 +391,16 @@ def readData(path):
 			eyeMetricList.append(eyeMetric)
 			isRingLightList.append(isRingLight)
 			isFullScreenList.append(isFullScreen)
+
+			hsMetricList["leftEye"].append(float(entryJSON['contrastMetrics']["leftEye"]["hsMetric"]))
+			hsMetricList["rightEye"].append(float(entryJSON['contrastMetrics']["rightEye"]["hsMetric"]))
+			hsMetricList["face"].append(float(entryJSON['contrastMetrics']["face"]["hsMetric"]))
+
+			hfmMetricList["leftEye"].append(float(entryJSON['contrastMetrics']["leftEye"]["hfmMetric"]))
+			hfmMetricList["rightEye"].append(float(entryJSON['contrastMetrics']["rightEye"]["hfmMetric"]))
+			hfmMetricList["face"].append(float(entryJSON['contrastMetrics']["face"]["hfmMetric"]))
+
+
 		except:
 			(point,x,y) = line.replace(',','').replace('\n','').split(" ")
 			(point,x,y) = (float(point), float(x), float(y))
@@ -362,9 +412,21 @@ def readData(path):
 	if(len(pointList) == 0):
 		sys.exit("Data is empty")
 
+	hsMetric = {
+		"leftEye": np.mean(np.array(hsMetricList["leftEye"])),
+		"rightEye": np.mean(np.array(hsMetricList["rightEye"])),
+		"face": np.mean(np.array(hsMetricList["face"])),
+	}
+	hfmMetric = {
+		"leftEye": np.mean(np.array(hfmMetricList["leftEye"])),
+		"rightEye": np.mean(np.array(hfmMetricList["rightEye"])),
+		"face": np.mean(np.array(hfmMetricList["face"])),
+	}
+
 	return (np.array(pointList), np.array(xList), np.array(yList), \
 			np.array(perimeterPercentList), np.array(eyeMetricList), \
-			np.array(isRingLightList), np.array(isFullScreenList))
+			np.array(isRingLightList), np.array(isFullScreenList), \
+			hsMetric, hfmMetric)
 
 def plotFromCoordsList(path, averagepoints = False, centerwithpoints = True ):
     # path = "CircleData"
@@ -373,7 +435,7 @@ def plotFromCoordsList(path, averagepoints = False, centerwithpoints = True ):
 
 	# Load and prepare all the data
     (points, xNumpy, yNumpy, perimeterPercentNumpy, \
-    	eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy) = readData(path);
+    	eyeMetricNumpy, isRingLightNumpy, isFullScreenNumpy, hsMetric, hfmMetric) = readData(path);
     (xNumpy, yNumpy, points) = cleanForPoints(xNumpy, yNumpy, points)
     xCentered = centerData(xNumpy)
     yCentered = centerData(yNumpy)
@@ -414,6 +476,8 @@ def isPartialDataFileName(fileNames):
 	return -1
 
 def makeReport(path):
+	if(os.path.exists(path + '/' + reportFileName)):
+		os.remove(path + '/' + reportFileName)
 	accuracyEdgeMetricReport(path,'')
 
 def plotFromReport(reportPath, xLabel, yLabel, controlLabels = None, controlCondition  = ['='], controlValues = None):
@@ -437,7 +501,9 @@ def plotFromReport(reportPath, xLabel, yLabel, controlLabels = None, controlCond
 		plt.show()
 
 def readReport(reportPath, xLabel, yLabel, controlLabels , controlCondition, controlValues):
- 
+
+	data = open(reportPath,"r")
+	xList = []
 	yList = []
 
 	for line in data:
@@ -456,6 +522,8 @@ def satisfyControls(entryJSON, controlLabels, controlCondition, controlValues):
 		entryLabel = entryJSON[label]
 		if(isinstance(entryLabel, list)):
 			entryLabel = np.mean(np.array(entryLabel))
+		if(isinstance(entryLabel, dict)):
+			entryLabel = (entryLabel["leftEye"] + entryLabel["rightEye"])/2
 		if(not satisfyConditionMap(controlCondition[i])(entryLabel,controlValues[i])):
 			return False
 	return True
