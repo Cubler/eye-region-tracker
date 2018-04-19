@@ -269,10 +269,14 @@ let MODEL = {
 	// Coordinate string to float array
 	// e.g. ("3.2, -5.2") => [3.2, -5.2]
 	parseCoords: (coords) => {
-        let [x,y] = coords.split(",")
-        x = parseFloat(x.trim())
-        y = parseFloat(y.trim())
-        return [x,y]
+        if(typeof(coords) == 'string'){
+            let [x,y] = coords.split(",")
+            x = parseFloat(x.trim())
+            y = parseFloat(y.trim())
+            return [x,y]
+        }else {
+            return coords;
+        }
 	},
 
     scaleEyeBox: ([x,y,boxWidth,boxHeight], widthFactor, heightFactor) => {
