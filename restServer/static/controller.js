@@ -5,6 +5,8 @@ let CONTROLLER = {
 
 	// Length of the debouncer sequence needed for the confirm decision
     confirmLength: 5,
+    feedbackDebounceLength: 5,
+    aSDebounceLen: 5,
 
     // Array used to buffer the estimated quadrants when 
     // determining if predictions have been consistent.
@@ -18,7 +20,10 @@ let CONTROLLER = {
     eps: 0.00001,
 
     isCanceled: false,
+    isDone: false,
     isRingLight: 0,
+    useDLMODEL: true,
+    DLMODELFeedbackDelay: 300,
 
     // The change in score for a miss and a hit respectively 
     missPoints: -5,
@@ -32,17 +37,34 @@ let CONTROLLER = {
 
     saveRequestURL: "/dataCollect",
     saveSubPathURL: "/start",
+    getTrialStatsURL: "/getTrialStats",
+    contrastMetricURL: "/getContrastMetric",
+    predictionPlotURL: "/getPredictionPlot",
+
+    cancelDataCollectURL: "/cancelDataCollect",
 
     saveSubPath: null,
     saveFullSubPath: null,
     saveRoundNum: 0,
 
 	// The server URL to send requests to
-	serverURL: "https://localhost:3000",
-
+//	serverURL: "https://localhost:3000",
+    serverURL: "https://comp158.cs.unc.edu:8080",
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
+        CONTROLLER.exitFullScreen();
+    },
+
+    cancelDataCollectRequest: () => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.cancelDataCollectURL;
+        let data = {
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
+            saveSubPath: CONTROLLER.saveSubPath,
+            saveRoundNum: CONTROLLER.saveRoundNum.toString(),
+        };
+        CONTROLLER.getRequest(method, url, data);
     },
 
     // Preforms a one time request to get and show coordinates from the server.
@@ -78,6 +100,16 @@ let CONTROLLER = {
                         numCaptures += 1;
                         let data = CONTROLLER.getSaveData(point, perimeterPercent);
                         CONTROLLER.getRequest(method, url, data).then((coords) => {
+                            if(CONTROLLER.isCanceled){
+                                CONTROLLER.cancelDataCollectRequest();
+                                clearTimeout(captureTimeout);
+                                resolve()
+                                return;
+                            }
+                            if(CONTROLLER.isDone){
+                                DISPLAY.showTrialStats();
+                                CONTROLLER.getPredictionPlot();
+                            }
                         });
                     }else{
                         clearTimeout(captureTimeout);
@@ -88,7 +120,11 @@ let CONTROLLER = {
         }else{
             return new Promise((resolve, reject) => {
                 let data = CONTROLLER.getSaveData(point, perimeterPercent);
-                CONTROLLER.getRequest(method, url, data)
+                CONTROLLER.getRequest(method, url, data).then(() => {
+                    if(CONTROLLER.isCanceled){
+                        CONTROLLER.cancelDataCollectRequest();
+                    }
+                });
                 resolve()
             });
         }
@@ -106,13 +142,13 @@ let CONTROLLER = {
     	CONTROLLER.debouncerArray = [];
     },
 
-	collectData: () => {
+	collectData: (perimeterPercent = 0.7) => {
 		// CONTROLLER.isRingLight = confirm("Are you using a ring light?");
         CONTROLLER.isCanceled = false;
+        CONTROLLER.isDone = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
-		let perimeterPercent = parseFloat(document.getElementById('perimeterPercent').value)/10;
-        let isFullScreenConfirm = confirm("I'd like to go full screen please")
+        let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
         } 
@@ -149,13 +185,17 @@ let CONTROLLER = {
         } 
 
         if(CONTROLLER.isCanceled){
+            CONTROLLER.cancelDataCollectRequest();
             return;
         }
 
 		if(revCounter > numOfRev){
 			// End
-			alert("Done");
-            CONTROLLER.exitFullscreen();
+            CONTROLLER.isDone = true;
+			alert("This trial is done!");
+            CONTROLLER.exitFullScreen();
+            DISPLAY.showTrialStats();
+            CONTROLLER.getPredictionPlot();
 		}else{
 
             let newStep = new Promise((resolve, reject) =>{
@@ -250,43 +290,62 @@ let CONTROLLER = {
         	return;
         }
 
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToQuadrant(coords);
-            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
-            if(debouncedQuadrant == -1){
-           		// Noisy feedback. Continue getting feedback.
-	      		DISPLAY.drawActionPics();
-				DISPLAY.showDebounceProgress();
-           		CONTROLLER.getActionFeedback();
-           	}else{
-	            if(lastQuadrant != debouncedQuadrant){
-	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
-	               	// if the returned quadrant is different from the current quadrant
-	                DISPLAY.selectAction(debouncedQuadrant);
-	                CONTROLLER.getActionFeedback(debouncedQuadrant);
-	                
-	            }else{
-	            	// Current quadrant is the same as the most recent quadrant
-                    CONTROLLER.getActionFeedback(debouncedQuadrant);
-	            }
-	        }
+        if(CONTROLLER.useDLMODEL){
+            var wait = new Promise((resolve,reject) => {
+                DLMODEL.getCoords().then((coords)=>{
+                    setTimeout(()=>{
+                        resolve(coords);
+                    },CONTROLLER.DLMODELFeedbackDelay)
+                });
+            })
+            wait.then((coords)=>{
+                CONTROLLER.getActionFeedbackHandler(coords, lastQuadrant);
+            });
+            
+        }else {
 
-	        if(CONTROLLER.debug){
-	        	let today = new Date();
-	        	let h = today.getHours();
-	        	let m = today.getMinutes();
-	        	let s = today.getSeconds();
-            	console.log("Time: " + h + ":" + m + ":" + s + 
-            		" Coords: " + coords +
-            		" newQuadrant: " + newQuadrant + 
-            		" debouncedQuadrant: " + debouncedQuadrant);
+            CONTROLLER.getRequest(method, url, data).then((coords) => {
+                CONTROLLER.getActionFeedbackHandler(coords);
+            }, (error) => {
+                console.log(error);
+            });
+        }
+    },
+
+    getActionFeedbackHandler: (coords, lastQuadrant) => {
+        let newQuadrant = MODEL.coordsToQuadrant(coords);
+        let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+        if(debouncedQuadrant == -1){
+            // Noisy feedback. Continue getting feedback.
+            DISPLAY.drawActionPics();
+            DISPLAY.showDebounceProgress();
+            CONTROLLER.getActionFeedback();
+        }else{
+            if(lastQuadrant != debouncedQuadrant){
+                // If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
+                // if the returned quadrant is different from the current quadrant
+                DISPLAY.selectAction(debouncedQuadrant);
+                CONTROLLER.getActionFeedback(debouncedQuadrant);
+                
+            }else{
+                // Current quadrant is the same as the most recent quadrant
+                CONTROLLER.getActionFeedback(debouncedQuadrant);
             }
-        }, (error) => {
-            console.log(error);
-        });
+        }
+        if(CONTROLLER.debug){
+            let today = new Date();
+            let h = today.getHours();
+            let m = today.getMinutes();
+            let s = today.getSeconds();
+            console.log("Time: " + h + ":" + m + ":" + s + 
+                " Coords: " + coords +
+                " newQuadrant: " + newQuadrant + 
+                " debouncedQuadrant: " + debouncedQuadrant);
+        }
     },
 
     getCenter: () => {
+        MODEL.centerList = [];
     	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
     		DISPLAY.drawRectPoint(0);
     		CONTROLLER.getCenterRequests().then(() => {
@@ -300,20 +359,32 @@ let CONTROLLER = {
     		let i = 0;
     		setTimeout(()=>{
 	    		getCenterTimeout = setInterval(()=>{
-		    		if(i < CONTROLLER.numPtsPerCenter){
-		    			let method = "GET";
-				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
-				        let data = {
-				            imgBase64: DISPLAY.getPicToDataURL(),
-				            faceFeatures: TRACKER.getFormatFaceFeatures(),
-				            currentPosition: null,
-				            saveSubPath: null,
-				        };
+		    		if(i++ < CONTROLLER.numPtsPerCenter){
+		    			if(CONTROLLER.useDLMODEL){
+                            var wait = new Promise((resolve,reject) => {
+                                DLMODEL.getCoords().then((coords)=>{
+                                    setTimeout(()=>{
+                                        resolve(coords);
+                                    },CONTROLLER.DLMODELFeedbackDelay)
+                                });
+                            })
+                            wait.then((coords)=>{
+                                MODEL.centerList.push(MODEL.parseCoords(coords));                            });
+                        }else {
 
-				        CONTROLLER.getRequest(method, url, data).then((coords) => {
-				        	MODEL.centerList.push(MODEL.parseCoords(coords));
-				        });
-				        i++;
+                            let method = "GET";
+    				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
+    				        let data = {
+    				            imgBase64: DISPLAY.getPicToDataURL(),
+    				            faceFeatures: TRACKER.getFormatFaceFeatures(),
+    				            currentPosition: null,
+    				            saveSubPath: null,
+    				        };
+
+    				        CONTROLLER.getRequest(method, url, data).then((coords) => {
+    				         	MODEL.centerList.push(MODEL.parseCoords(coords));
+    				        });
+                        }
 		    		}else{
 		    			clearTimeout(getCenterTimeout);
 		    			resolve();
@@ -361,6 +432,27 @@ let CONTROLLER = {
         });
     },
 
+    getContrastMetric: () => {
+        return new Promise ((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.contrastMetricURL;
+            let data = CONTROLLER.getSaveData(-1, -1);
+            CONTROLLER.getRequest(method, url, data).then((metrics) =>{
+                metricsJSON = JSON.parse(metrics);
+                let outputString = "Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")\n" +
+                  "Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")\n" + 
+                  "Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")";
+
+                console.log("Left Eye (HS, HFM): (" + parseFloat(metricsJSON['leftEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['leftEye']['hfmMetric']).toFixed(2) + ")");
+                console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
+                console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
+
+                resolve(outputString);
+            });
+        });
+
+    },
+
     getDebounceProgress: (array) => {
     	let count = array.map(CONTROLLER.checkConsistent).lastIndexOf(false);
     	if(count == -1){
@@ -393,6 +485,19 @@ let CONTROLLER = {
         });
     },
 
+    getPredictionPlot: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.predictionPlotURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                document.getElementById('predictionPlot').src = 'data:image/png;base64,' + jsonS
+            });
+        });
+    },
+
     getSaveData: (point, perimeterPercent) => {
         let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
@@ -403,21 +508,36 @@ let CONTROLLER = {
             imgBase64: DISPLAY.getPicToDataURL(),
             faceFeatures: featuresString,
             currentPosition: point,
-            saveSubPath: CONTROLLER.saveFullSubPath,
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
             perimeterPercent: perimeterPercent,
             isRingLight: document.getElementById('ringLightSetting').value,
             isFullScreen: (!window.screenTop && !window.screenY),
-            aspectDim: [window.innerHeight, window.innerWidth],
+            aspectDim: [window.innerHeight, window.innerWidth].toString(),
+            dlModelCoords: DLMODEL.getCoords(),
         };
 
         return data;
+    },
+
+    getTrialStats: () => {
+        return new Promise((resolve,reject) => {
+            let method = "GET";
+            let url = CONTROLLER.serverURL + CONTROLLER.getTrialStatsURL;
+            let data = {
+                saveFullSubPath: CONTROLLER.saveFullSubPath,
+            };
+            CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
+                stats = JSON.parse(jsonS);
+                resolve(stats);
+            });
+        });
     },
 
     // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
         MODEL.userSequence = [];
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 2;
+        CONTROLLER.debouncerLength = parseInt($('#debouncerLength').val());
         CONTROLLER.isCanceled = false;
     	CONTROLLER._getUserFeedbackCoords(round, true, -1);
     },
@@ -440,81 +560,98 @@ let CONTROLLER = {
         	return;
         }
 
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToQuadrant(coords);
-            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+        if(CONTROLLER.useDLMODEL){
+            var wait = new Promise((resolve,reject) => {
+                var coords = DLMODEL.getCoords()
+                setTimeout(()=>{
+                    resolve(coords);
+                },CONTROLLER.DLMODELFeedbackDelay)
+            })
+            wait.then((coords)=>{
+                CONTROLLER.getUserFeedbackHandler(coords, round, isLoopInput, lastQuadrant);
+            });
             
-            if(debouncedQuadrant == -1){
-           		// Noisy feedback. Continue getting feedback.
-           		CONTROLLER._getUserFeedbackCoords(round, true);
+        }else {
+            CONTROLLER.getRequest(method, url, data).then((coords) => {
+                CONTROLLER.getUserFeedbackHandler(coords, round, isLoopInput, lastQuadrant);
+            }, (error) => {
+                console.log(error);
+            });
+        }
 
-           	}else{
-	            if(lastQuadrant != debouncedQuadrant){
-	               	// If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
-	               	// if the returned quadrant is different from the current quadrant
+    },
 
-	                MODEL.userSequence.push(debouncedQuadrant);
-	                DISPLAY.showFeedback(debouncedQuadrant);
+    getUserFeedbackHandler: (coords, round, isLoopInput, lastQuadrant) => {
+        let newQuadrant = MODEL.coordsToQuadrant(coords);
+        let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+        
+        if(debouncedQuadrant == -1){
+            // Noisy feedback. Continue getting feedback.
+            CONTROLLER._getUserFeedbackCoords(round, true);
 
-	                if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
-	                   	// (Hit) New quadrant is the correct next quadrant in the sequence
-	                   	MODEL.updateScore(CONTROLLER.hitPoints);
+        }else{
+            if(lastQuadrant != debouncedQuadrant){
+                // If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
+                // if the returned quadrant is different from the current quadrant
 
-	                    if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
-	                        // Round Complete, trigger event
-	                        setTimeout(()=> {
-	                        	DISPLAY.showComment("Round Complete!").then(() => {
-		                        	CONTROLLER.triggerRoundComplete(round);
-	                        	});
-	                        },500);
-	                        
-	                    }else {
-	                        // The userSequence is a partial match. Need to keep getting input
-	                        if(isLoopInput){
-	                            CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
+                MODEL.userSequence.push(debouncedQuadrant);
+                DISPLAY.showFeedback(debouncedQuadrant);
 
-	                        }
-	                    }
-	                }else{
-	                	// (Miss) New quadrant is not the correct next quadrant in the sequence
-	                	MODEL.userSequence.pop();
+                if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
+                    // (Hit) New quadrant is the correct next quadrant in the sequence
+                    MODEL.updateScore(CONTROLLER.hitPoints);
+
+                    if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
+                        // Round Complete, trigger event
+                        setTimeout(()=> {
+                            DISPLAY.showComment("Round Complete!").then(() => {
+                                CONTROLLER.triggerRoundComplete(round);
+                            });
+                        },500);
+                        
+                    }else {
+                        // The userSequence is a partial match. Need to keep getting input
+                        if(isLoopInput){
+                            CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
+
+                        }
+                    }
+                }else{
+                    // (Miss) New quadrant is not the correct next quadrant in the sequence
+                    MODEL.userSequence.pop();
 
 
-	                	if(MODEL.userSequence.length == 0 || 
-							debouncedQuadrant != MODEL.userSequence[MODEL.userSequence.length-1]){	
-	                		// The current loop is a transition to a new, incorrect, quadrant 
-	                		// (ignoring a transition to the most recent correct quadrant) and 
-	                		// therefore a new miss.
-                			MODEL.updateScore(CONTROLLER.missPoints);
-						}
+                    if(MODEL.userSequence.length == 0 || 
+                        debouncedQuadrant != MODEL.userSequence[MODEL.userSequence.length-1]){  
+                        // The current loop is a transition to a new, incorrect, quadrant 
+                        // (ignoring a transition to the most recent correct quadrant) and 
+                        // therefore a new miss.
+                        MODEL.updateScore(CONTROLLER.missPoints);
+                    }
 
-	                    if(isLoopInput){
-	                        CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
-	                    }
-	                } 
-	            }else{
-	            	// Current quadrant is the same as the most recent quadrant
+                    if(isLoopInput){
+                        CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
+                    }
+                } 
+            }else{
+                // Current quadrant is the same as the most recent quadrant
 
-	                if(isLoopInput){
-	                    CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
-	                }
-	            }
-	        }
-
-	        if(CONTROLLER.debug){
-	        	let today = new Date();
-	        	let h = today.getHours();
-	        	let m = today.getMinutes();
-	        	let s = today.getSeconds();
-            	console.log("Time: " + h + ":" + m + ":" + s + 
-            		" Coords: " + coords +
-            		" newQuadrant: " + newQuadrant + 
-            		" debouncedQuadrant: " + debouncedQuadrant);
+                if(isLoopInput){
+                    CONTROLLER._getUserFeedbackCoords(round, true, debouncedQuadrant);
+                }
             }
-        }, (error) => {
-            console.log(error);
-        });
+        }
 
+        if(CONTROLLER.debug){
+            let today = new Date();
+            let h = today.getHours();
+            let m = today.getMinutes();
+            let s = today.getSeconds();
+            console.log("Time: " + h + ":" + m + ":" + s + 
+                " Coords: " + coords +
+                " newQuadrant: " + newQuadrant + 
+                " debouncedQuadrant: " + debouncedQuadrant);
+        }
     },
 
     goToAnimationCanvas: () => {
@@ -585,7 +722,7 @@ let CONTROLLER = {
         $(document).on('webkitfullscreenchange mozfullscreenchange fullscreenchange', function(e){
             CONTROLLER.goToAnimationCanvas();
         });
-
+        CONTROLLER.serverURL = window.location.href.substring(0,window.location.href.indexOf(window.location.pathname));
 
     	CONTROLLER.downloadFeatures = (function() {
 	    	let a = document.createElement("a");
@@ -618,7 +755,7 @@ let CONTROLLER = {
     startActionSelect: () => {
         DISPLAY.drawActionPics();
         CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = 4;
+        CONTROLLER.debouncerLength = CONTROLLER.aSDebounceLen;
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },
@@ -633,6 +770,7 @@ let CONTROLLER = {
 
     // Called when the user decides to start the game. Starts a new SimonSays game
     startSimonSays: () => {
+        MODEL.clearScore();
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
         MODEL.setNewSequence(maxSeqLen);
         CONTROLLER.triggerRoundComplete(0);

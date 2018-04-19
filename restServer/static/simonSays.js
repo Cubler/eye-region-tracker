@@ -12,11 +12,6 @@ $(document).ready(() => {
         CONTROLLER.getNewSequence();
     });
 
-    $('#actionSelectionButton').click(function() {
-        CONTROLLER.debouncerLength = parseInt($('#debouncerLength').val());
-        CONTROLLER.startActionSelect();
-    });
-
     $('#getPos').click(function() {
         CONTROLLER.capture();
     });
@@ -49,21 +44,14 @@ $(document).ready(() => {
         CONTROLLER.startTracking();
     });
 
-    $('#getEdges').click(()=>{
-        DISPLAY.showEdges();
-    });
-
     $('#getEdgeMetric').click(()=>{
         MODEL.getEdgeMetric();
-        CONTROLLER.getContrastMetric().then((outputString)=> {
-            document.getElementById('coordsList').value = outputString;
-        });
     });
 
     $('#collectData').click(()=>{
-//        window.location.href='#animationCanvas'
-//        perimPerc = parseFloat(document.getElementById('perimeterPercent').value)/10;
-//        CONTROLLER.collectData(perimPerc);
+        window.location.href='#animationCanvas'
+        perimPerc = parseFloat(document.getElementById('perimeterPercent').value)/10;
+        CONTROLLER.collectData(perimPerc);
     });
 
     $(window).resize(function(){

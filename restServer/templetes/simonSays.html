@@ -13,23 +13,11 @@ $def with (page)
   <script src="./static/tracking.js/src/alignment/training/Landmarks.js"></script>
   <script src="./static/tracking.js/src/alignment/training/Regressor.js"></script>
 
-  <!-- <script src="./static/caffejs/docs/assets/libs/long.min.js"></script> -->
-  <!-- <script src="./static/caffejs/docs/assets/libs/bytebuffer.min.js"></script> -->
-  <!-- <script src="./static/caffejs/docs/assets/libs/protobuf.min.js"></script> -->
-
-  <!-- <script src="./static/caffejs/docs/assets/libs/d3.min.js"></script> -->
-  <!-- <script src="./static/caffejs/docs/assets/libs/prototxt-parser.min.js"></script> -->
-  <!-- <script src="./static/caffejs/dist/caffe.js"></script> -->
-
-  <script src="./static/deeplearnjs-caffe/dist/browser/deeplearn-caffe.js"></script>
-
   <script src="./static/display.js" type="text/javascript"></script>
   <script src="./static/tracker.js" type="text/javascript"></script>
   <script src="./static/controller.js" type="text/javascript"></script>
   <script src="./static/model.js" type="text/javascript"></script>
-  <script src="./static/gazeModel.js" type="text/javascript"></script>
-  <script src="./static/eyeTrainer.js" type="text/javascript"></script>
-  <script src="./static/dlModel.js" type="text/javascript"></script>
+  <script src="./static/feedback.js" type="text/javascript"></script>
 
     <link rel='stylesheet' href='./static/style.css'>
   
@@ -46,29 +34,35 @@ $def with (page)
   <p>
   </div>
 
-  </div class = "save-frame">
+  <div class = "save-frame">
     <video id="saveVideo" width="640" height="426" preload autoplay loop muted></video>
     <canvas id="saveCanvas" width="640" height="426"></canvas>
   </div>
-  <br>
+  
   <input type="number" id="positionChoice" min="0" max="4" value="0">
   <button id="getCenter" onclick= "window.location.href='#animationCanvas'">Get Center"</button> 
   <button id="getPos" >Get Position</button>
-  <button id="confirm" >Confirm</button>
 
-  <button id="actionSelectionButton" onclick= "window.location.href='#animationCanvas'">Start Action Selection</button>
+  Sequence Length:<input type="number" id="sequenceLength" min="1" max="10" value="3">
+  <button id="getSequence" >Get Sequence</button>
+  Sequence: <input type="text" id="sequence">
+  <button id="trackButton" onclick= "window.location.href='#animationCanvas'">Start Simon Says</button>
+  <button id="getUserSequence" onclick= "window.location.href='#animationCanvas'">Get User Sequence</button>
   <button id="cancelTrack" >Cancel</button>
+  Score: <input type="text" id="score">
   <button id="stopTracking">Stop Tracking</button>
   <button id="startTracking">Start Tracking</button>
   <button id="getEdges">Get Edges</button>
   <button id="getEdgeMetric">Get Edge Metric</button>
   Eye Edge Average: <input type="text" id="edgeMetric">
   <button id="collectData"> Collect Data </button>
-  PerimeterPercent: <input type="number" id="perimeterPercent" min="1" max="10" value="10">
+  PerimeterPercent: <input type="number" id="perimeterPercent" min="1" max="10" value="7">
+  RingLightSetting: <input type="number" id="ringLightSetting" min="0" max="10" value="0">
+
 
   <div class="animation">
     <canvas id="animationCanvas" width="1400" height="1000" style="border:2px solid #000000"></canvas>
-    
+    </div>
 <br>
 <textarea id="coords" rows="4" cols="50">
 "Original Text"

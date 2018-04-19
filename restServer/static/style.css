@@ -12,10 +12,22 @@
 }
 #saveVideo {
     visibility:hidden;
+    position: absolute;
+    overflow: hidden;
 }
 #instructions {
    	margin-left: 50%;
     margin-top: 50px;
-    position: absolute; 
+    position: relative; 
 }
-
+#guidelines {
+   	margin-left: 50%;
+    margin-top: 50px;
+    position: relative; 
+}
+.view-frame {
+    height: 400px;
+    width: 50%;
+    position: relative;
+    float: left;
+}
