@@ -55,29 +55,14 @@ let DLMODEL = {
     },
 
     getCoords: () => {
-        // return new Promise((resolve, reject) => {
-        //     var start = Date.now();
-        //     var [imageLeft, imageRight, imageFace, faceGrid] = MODEL.getModelInput();
-        //     [imageLeft, imageRight, imageFace, faceGrid] = [DLMODEL.dl.Array3D.fromPixels(imageLeft), DLMODEL.dl.Array3D.fromPixels(imageRight),
-        //      DLMODEL.dl.Array3D.fromPixels(imageFace), DLMODEL.dl.Array1D.new(faceGrid)];
-
-        //     var output = DLMODEL.model.predict([imageLeft, imageRight, imageFace, faceGrid], DLMODEL.untilLayer, (n,l,a) => { });
-        //     var seconds = (Date.now() - start)/1000;
-        //     console.log("Duration: " + seconds)
-        //     DLMODEL.dl.ENV.math.read(output.dataId).then((coords) => {
-        //         resolve(coords);
-        //     })
-        // });
-
-        var start = Date.now();
         var [imageLeft, imageRight, imageFace, faceGrid] = MODEL.getModelInput();
         [imageLeft, imageRight, imageFace, faceGrid] = DLMODEL.formatModelInput(imageLeft, imageRight, imageFace, faceGrid)
 
         var output = DLMODEL.model.predict([imageLeft, imageRight, imageFace, faceGrid], DLMODEL.untilLayer, (n,l,a) => { });
-        var seconds = (Date.now() - start)/1000;
-        console.log("Duration: " + seconds)
-        console.log(output.getValues());    
-
+        // output.getValuesAsync().then((coords)=>{
+        //     resolve(coords);
+        // });
+        return output.getValues();
     },
 }
 
