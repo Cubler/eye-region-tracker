@@ -1,0 +1,166 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../dist/browser/deeplearn-caffe.js"></script>
+<!-- <script src="https://unpkg.com/deeplearn-caffe"></script> -->
+
+
+<img id="img" src='img/cat.jpg'></img>
+<img id="faceImg" src='2/face/0.jpg'></img>
+<img id="leftImg" src='2/leftEye/0.jpg'></img>
+<img id="rightImg" src='2/rightEye/0.jpg'></img>
+<div id="result"></div>
+
+<script>
+  var error = false;
+  var dl = deeplearnCaffe.dl;
+  var faceImg = document.getElementById('faceImg');
+  var leftImg = document.getElementById('leftImg');
+  var rightImg = document.getElementById('rightImg');
+  var faceGridUri = '2/face/faceGridData.json';
+  var faceGrid = null;
+
+  var out = document.getElementById('result');
+
+  var GITHUB_CDN = 'https://rawgit.com/';
+  var MODEL_DIR = 'models/';
+
+  // Caffemodel needs to be downloaded from here
+  var modelUrl = 'http://dl.caffe.berkeleyvision.org';
+
+  var prototxtUrl = '../../models/itracker_deploy.prototxt'
+  var caffemodelUrl = '../../models/itracker25x_iter_92000.caffemodel'
+  var meanUrl = '../../models/mean_images'
+
+  // Initialize the CaffeModel
+  var model = new deeplearnCaffe.CaffeModel(caffemodelUrl, prototxtUrl)
+
+  var untilLayer = undefined;   // forward pass until this layer
+  var imageUrl = 'img/cat.jpg'; // use this image for classification
+
+  var results = null;
+
+  out.innerText = 'Open DevTools for debug info';
+
+  function loadImageData(url, img) { 
+
+	  return new Promise((resolve, reject) => {
+	    img.onload = async () => {
+
+	      resolve(img);
+	    };
+	    img.onerror = (err) => {
+	      reject(err);
+	    };
+	    img.src = url;
+	  });
+    }
+
+  // Run this block using async/await
+  (async function(){
+
+    // If dl isn't loaded, wait 1 second.
+    if (dl == null || faceGrid == null) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // In case you want to force CPU or GPU mode
+    // dl.ENV.setMath(new dl.NDArrayMath('cpu', false));
+    // dl.ENV.setMath(new dl.NDArrayMath('webgl', false));
+
+    var start = Date.now();
+    console.log('Loading image pixels..');
+
+    faceGrid = await new Promise((resolve, reject) => {
+        $.ajax({type: "GET",
+            url: faceGridUri,
+            success: function (data){
+                resolve(data);
+            },
+        });
+      });
+    
+    
+    var seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Loading model structure and weights..');
+    await model.load().catch(function(err) {
+      error = err;
+      out.innerText =
+        'Please download the Caffemodel from ' + modelUrl + ' ' +
+        'and place it into the path ' + caffemodelUrl + '!';
+    });
+
+    await model.load_binaryproto(meanUrl+'/mean_left_224.binaryproto');
+    model.variables['mean_left'] = [model.getPreprocessOffset()];
+    
+    await model.load_binaryproto(meanUrl+'/mean_right_224.binaryproto');
+    model.variables['mean_right'] = [model.getPreprocessOffset()];
+    
+    await model.load_binaryproto(meanUrl+'/mean_face_224.binaryproto');
+    model.variables['mean_face'] = [model.getPreprocessOffset()];
+
+    if (error) {
+      console.log('Model could not be loaded. Aborting.')
+      return;
+    }
+    
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Predicting..');
+    // Make a forward pass through the CaffeModel
+    [l,r,f,g] = getInput();
+    var result = await model.predict([l,r,f,g], untilLayer, function(name, layer, activation){
+      // We can access all activiations here.
+      // Keep in mind that calling .dataSync() will fetch the data from GPU memory
+      // during
+      // console.log(name, layer, activation.dataSync());
+    });
+
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    console.log('Finished..');
+    console.log(results);
+  })();
+
+  function run() {
+    var start = Date.now();
+    console.log('Loading image pixels..');
+   
+    var facePx = dl.Array3D.fromPixels(faceImg);
+    var rightPx = dl.Array3D.fromPixels(rightImg);
+    var leftPx = dl.Array3D.fromPixels(leftImg);
+    var faceGridArray = dl.Array1D.new(faceGrid);
+
+    var seconds = (Date.now() - start)/1000;
+    console.log("Running Model ...")
+    start = Date.now();
+    namedActivation = {};
+    [l,r,f,g] = getInput();
+    var results = model.predict([l,r,f,g], untilLayer, function(name, layer, activation){ 
+        namedActivation[name] = activation; })
+    
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+
+    results.math.read(results.dataId).then((coords)=>{
+        console.log(coords);
+    });    
+  }
+    
+  function getInput() {
+    var facePx = dl.Array3D.fromPixels(faceImg);
+    facePx = dl.ENV.math.resizeBilinear3D(facePx,[224,224]);
+    facePx = dl.ENV.math.transpose(facePx,[1,0,2])
+    var rightPx = dl.Array3D.fromPixels(rightImg);
+    rightPx = dl.ENV.math.resizeBilinear3D(rightPx,[224,224]);
+    rightPx = dl.ENV.math.transpose(rightPx,[1,0,2])
+    var leftPx = dl.Array3D.fromPixels(leftImg);
+    leftPx = dl.ENV.math.resizeBilinear3D(leftPx,[224,224]);
+    leftPx = dl.ENV.math.transpose(leftPx,[1,0,2])
+//    var faceGridArray = dl.Array1D.new(faceGrid);
+    var faceGridArray = dl.Array1D.zeros([625]);
+
+    return [leftPx, rightPx, facePx, faceGridArray]
+  }
+</script>

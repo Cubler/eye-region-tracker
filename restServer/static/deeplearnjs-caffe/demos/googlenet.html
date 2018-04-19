@@ -1,0 +1,141 @@
+<!-- <script src="../dist/browser/deeplearn-caffe.js"></script> -->
+<script src="https://unpkg.com/deeplearn-caffe"></script>
+
+
+<img id="img" src='img/cat.jpg'></img>
+<img id="faceImg" src='1/face/0.jpg'></img>
+<img id="leftImg" src='1/leftEye/0.jpg'></img>
+<img id="rightImg" src='1/rightEye/0.jpg'></img>
+<div id="result"></div>
+
+<script>
+  var error = false;
+  var dl = deeplearnCaffe.dl;
+  var faceImg = document.getElementById('faceImg');
+  var leftImg = document.getElementById('faceImg');
+  var rightImg = document.getElementById('faceImg');
+  var faceGrid = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  var out = document.getElementById('result');
+
+  var GITHUB_CDN = 'https://rawgit.com/';
+  var MODEL_DIR = 'models/';
+
+  // Caffemodel needs to be downloaded from here
+  var modelUrl = 'http://dl.caffe.berkeleyvision.org';
+
+  var prototxtUrl = '../../models/itracker_deploy.prototxt'
+  var caffemodelUrl = '../../models/itracker25x_iter_92000.caffemodel'
+
+  // Initialize the CaffeModel
+  var model = new deeplearnCaffe.CaffeModel(caffemodelUrl, prototxtUrl);
+
+  var untilLayer = undefined;   // forward pass until this layer
+  var imageUrl = 'img/cat.jpg'; // use this image for classification
+
+  var results = null;
+
+  out.innerText = 'Open DevTools for debug info';
+
+  function loadImageData(url, img) { 
+
+	  return new Promise((resolve, reject) => {
+	    img.onload = async () => {
+	      resolve(img);
+	    };
+	    img.onerror = (err) => {
+	      reject(err);
+	    };
+	    img.src = url;
+	  });
+    }
+
+  // Run this block using async/await
+  (async function(){
+
+    // If dl isn't loaded, wait 1 second.
+    if (dl == null) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // In case you want to force CPU or GPU mode
+    // dl.ENV.setMath(new dl.NDArrayMath('cpu', false));
+    // dl.ENV.setMath(new dl.NDArrayMath('webgl', false));
+
+    var start = Date.now();
+    console.log('Loading image pixels..');
+    var imageData = img;
+    var pixels = dl.Array3D.fromPixels(imageData);
+
+    var seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Loading model structure and weights..');
+    await model.load().catch(function(err) {
+      error = err;
+      out.innerText =
+        'Please download the Caffemodel from ' + modelUrl + ' ' +
+        'and place it into the path ' + caffemodelUrl + '!';
+    });
+
+    if (error) {
+      console.log('Model could not be loaded. Aborting.')
+      return;
+    }
+    
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Predicting..');
+    // Make a forward pass through the CaffeModel
+    var result = await model.predict(pixels, untilLayer, function(name, layer, activation){
+      // We can access all activiations here.
+      // Keep in mind that calling .dataSync() will fetch the data from GPU memory
+      // during
+      // console.log(name, layer, activation.dataSync());
+    });
+
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Computing top-k..');
+
+    var k = 5;
+    var topK = await deeplearnCaffe.util.getTopK(result, k);
+
+    seconds = (Date.now() - start)/1000;
+    console.log("Duration: " + seconds)
+    start = Date.now();
+    console.log('Finished..');
+
+    out.innerText = '';
+    for (let i = 0; i < k; i++) {
+      var idx = topK.indices[i];
+      out.innerText += `${topK.values[i].toFixed(5)}: ${deeplearnCaffe.IMAGENET_CLASSES[idx]}\n`;
+    };
+  })();
+
+  function run() {
+    var facePx = dl.Array3D.fromPixels(faceImg);
+    var rightPx = dl.Array3D.fromPixels(leftImg);
+    var leftPx = dl.Array3D.fromPixels(rightImg);
+    var faceGridArray = dl.Array1D.new(faceGrid);
+    
+    // return Promise((resolve,reject)=> {
+    //     model.predict([leftPx,rightPx,facePx,faceGridArray], untilLayer, function(name, layer, activation){
+    //   // We can access all activiations here.
+    //   // Keep in mind that calling .dataSync() will fetch the data from GPU memory
+    //   // during
+    //   // console.log(name, layer, activation.dataSync());
+    //     });
+    // });
+
+    model.predict([leftPx,rightPx,facePx,faceGridArray], untilLayer, function(name, layer, activation){
+      // We can access all activiations here.
+      // Keep in mind that calling .dataSync() will fetch the data from GPU memory
+      // during
+      // console.log(name, layer, activation.dataSync());
+    }).then((res)=>{
+        results = res;
+    });
+  }
+</script>

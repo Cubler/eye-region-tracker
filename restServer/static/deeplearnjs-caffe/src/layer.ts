@@ -1,0 +1,265 @@
+import {caffe} from 'caffe-proto';
+import {Array1D, Array3D, Array4D, NDArray, NDArrayMath} from 'deeplearn';
+
+// tslint:disable-next-line:max-line-length
+export function getLayersFromModel(model: caffe.NetParameter):
+    caffe.IV0LayerParameter[]|caffe.IV1LayerParameter[] {
+  return model.layer.length > 0 ? model.layer as caffe.IV0LayerParameter[] :
+                                  model.layers as caffe.IV1LayerParameter[];
+}
+
+function getNumericParam(param: number|number[], defaultValue: number) {
+  const p = Array.isArray(param) ? param[0] : param;
+  return p || defaultValue;
+}
+
+// tslint:disable-next-line:no-any
+function isDefined(val: any) {
+  return val !== undefined && val !== null;
+}
+
+function get1or2dParam(
+    param: number|number[], paramW: number, paramH: number,
+    defaultValue: number): number|[number, number] {
+  if (isDefined(param)) {
+    return param as [number, number];
+  } else if (isDefined(paramW) && isDefined(paramH)) {
+    return [paramW, paramH];
+  }
+  return defaultValue;
+}
+
+/* function getConvStride(param: caffe.ConvolutionParameter):
+    number|[number, number] {
+  return get1or2dParam(param.stride, param.strideW, param.strideH, 1);
+} */
+
+function getPoolStride(param: caffe.PoolingParameter): number|[number, number] {
+  return get1or2dParam(param.stride, param.strideW, param.strideH, 1);
+}
+
+function getPoolKernel(param: caffe.PoolingParameter): number|[number, number] {
+  return get1or2dParam(param.kernelSize, param.kernelW, param.kernelH, 1);
+}
+
+function getPoolType(poolType: string|number): number {
+  if (typeof poolType === 'number') {
+    return poolType;
+  } else {
+    switch (poolType.toLowerCase()) {
+      case 'max':
+        return caffe.PoolingParameter.PoolMethod.MAX;
+      case 'ave':
+        return caffe.PoolingParameter.PoolMethod.AVE;
+      default:
+        throw TypeError(`Pool type ${poolType} is not implemented`);
+    }
+  }
+}
+
+export function performMathOp(
+    math: NDArrayMath, input: NDArray|NDArray[], layer: caffe.ILayerParameter,
+    blobs?: NDArray[]): NDArray {
+  switch (layer.type.toLowerCase()) {
+    case 'input':
+    case 'dropout':
+      return input as NDArray;
+
+    case 'fc':
+    case 'innerproduct':
+    case 'inner_product': {
+      const innerProductParam =
+          caffe.InnerProductParameter.create(layer.innerProductParam);
+      const weights = blobs[0] as Array3D;
+      const x = (input as Array3D).as1D();
+      const W = weights.as2D(weights.shape[0], weights.shape[1]);
+      const y = math.vectorTimesMatrix(x, W);
+
+      if (innerProductParam.biasTerm !== false) {
+        const b = blobs[1].as1D() as Array1D;
+        return math.add(y, b);
+      }
+      return y;
+    }
+
+    case 'conv':
+    case 'convolution': {
+      const convolutionParam =
+          caffe.ConvolutionParameter.create(layer.convolutionParam);
+      const stride = getNumericParam(convolutionParam.stride, 1);
+
+      // TODO throw error if pad is number[] or padW and padH
+      // are defined. pad number[] is not supported in dljs
+      const pad = getNumericParam(convolutionParam.pad, 0);
+      const dimRoundingMode = 'floor';
+
+      // kernelSize is estimated from weights implicitly
+      const weights = blobs[0] as Array4D;
+      const bias = convolutionParam.biasTerm !== false ?
+          blobs[1].as1D() as Array1D :
+          null;
+      if(convolutionParam.group != undefined && convolutionParam.group == 2){
+        const newShape = (input as Array3D).shape.slice(0) as [number, number, number];
+        newShape[2] = newShape[2]/2;
+        const input1 = math.slice3D((input as Array3D), [0,0,0], newShape) as Array3D
+        const input2 = math.slice3D((input as Array3D), [0,0,newShape[2]], newShape) as Array3D
+//        const input1 = NDArray.make(newShape, {}, (input as Array3D).dtype, math) as Array3D;
+//        const input2 = NDArray.make(newShape, {},  (input as Array3D).dtype, math) as Array3D;
+//        math.write(input1.dataId,  (input as Array3D).getValues().slice(0, (input as Array3D).size/2));
+//        math.write(input2.dataId,  (input as Array3D).getValues().slice((input as Array3D).size/2, (input as Array3D).size));
+
+        const newWeightShape = (weights as Array4D).shape.slice(0) as [number,number,number,number];
+        newWeightShape[3] = newWeightShape[3]/2;
+        const weights1 = math.slice4D((weights as Array4D), [0,0,0,0], newWeightShape) as Array4D
+        const weights2 = math.slice4D((weights as Array4D), [0,0,0,newWeightShape[3]], newWeightShape) as Array4D
+
+//        const weights1 = NDArray.make(newWeightShape, {}, (weights as Array4D).dtype, math) as Array4D;
+//        const weights2 = NDArray.make(newWeightShape, {},  (weights as Array4D).dtype, math) as Array4D;
+//        math.write(weights1.dataId,  (weights as Array4D).getValues().slice(0, (weights as Array4D).size/2));
+//        math.write(weights2.dataId,  (weights as Array4D).getValues().slice((weights as Array4D).size/2, (weights as Array4D).size));
+
+        const newBiasShape = (bias as Array1D).shape.slice(0) as [number];
+        newBiasShape[0] = newBiasShape[0]/2;
+        const bias1 = math.slice1D((bias as Array1D), 0, newBiasShape[0]) as Array1D
+        const bias2 = math.slice1D((bias as Array1D), newBiasShape[0], newBiasShape[0]) as Array1D
+
+//        const bias1 = NDArray.make(newBiasShape, {}, (bias as Array1D).dtype, math) as Array1D;
+//        const bias2 = NDArray.make(newBiasShape, {},  (bias as Array1D).dtype, math) as Array1D;
+//        math.write(bias1.dataId,  (bias as Array1D).getValues().slice(0, (bias as Array1D).size/2));
+//        math.write(bias2.dataId,  (bias as Array1D).getValues().slice((bias as Array1D).size/2, (bias as Array1D).size));
+
+        const output1 = math.conv2d(input1 as Array3D, weights1, bias1, stride, pad, dimRoundingMode);
+        const output2 = math.conv2d(input2 as Array3D, weights2, bias2, stride, pad, dimRoundingMode);
+        
+        const output = math.concat3D(output1, output2,2) as Array3D
+//        const output = NDArray.make(output1.shape, {},  (input as Array3D).dtype, math) as Array3D;
+//        const values = new Float32Array(output1.getValues().length*2)
+//        values.set(output1.getValues())
+//        values.set(output2.getValues(), output1.getValues().length)
+//        math.write(output.dataId, values);
+        
+        return output
+      }
+      else{  
+        return math.conv2d(
+          input as Array3D, weights, bias, stride, pad, dimRoundingMode);
+      }
+    }
+
+    case 'pool':
+    case 'pooling': {
+      const poolingParam = caffe.PoolingParameter.create(layer.poolingParam);
+      const stride = getPoolStride(poolingParam);
+
+      // TODO throw error if pad is number[] or padW and padH
+      // are defined. pad number[] is not supported in dljs
+      const pad = getNumericParam(poolingParam.pad, 0);
+      const dimRoundingMode = 'ceil';
+
+      let kernelSize = getPoolKernel(poolingParam);
+      if (poolingParam.globalPooling) {
+        kernelSize = (input as Array3D).shape[0];
+      }
+
+      switch (getPoolType(poolingParam.pool)) {
+        case caffe.PoolingParameter.PoolMethod.MAX:
+          return math.maxPool(
+              input as Array3D, kernelSize, stride, pad, dimRoundingMode);
+
+        case caffe.PoolingParameter.PoolMethod.AVE:
+          return math.avgPool(
+              input as Array3D<'float32'>, kernelSize, stride, pad,
+              dimRoundingMode);
+
+        default:
+          throw TypeError(
+              `Pooling type ${poolingParam.pool} is not implemented`);
+      }
+    }
+
+    case 'batchnorm': {
+      const bnParam = caffe.BatchNormParameter.create(layer.batchNormParam);
+      const eps = bnParam.eps;
+      const mean = blobs[0] as Array3D;
+      const variance = blobs[1] as Array3D;
+
+      return math.batchNormalization3D(input as Array3D, mean, variance, eps);
+    }
+
+    case 'lrn': {
+      const lrnParam = caffe.LRNParameter.create(layer.lrnParam);
+      // params need to be converted from caffe to tf.lrn implementation
+      const radius = Math.floor(lrnParam.localSize / 2) || 2;
+      const bias = lrnParam.k || 1;
+      const alpha = lrnParam.alpha / lrnParam.localSize || 1;
+      const beta = lrnParam.beta || 0.75;
+      const normRegion =
+          lrnParam.normRegion === caffe.LRNParameter.NormRegion.WITHIN_CHANNEL ?
+          'withinChannel' :
+          'acrossChannels';
+
+      return math.localResponseNormalization3D(
+          input as Array3D, radius, bias, alpha, beta, normRegion);
+    }
+
+    case 'scale': {
+      const scaleParam = caffe.ScaleParameter.create(layer.scaleParam);
+      const scale = blobs[0] as Array3D;
+
+      let out = math.multiply(input as Array3D, scale);
+
+      if (scaleParam.biasTerm) {
+        const bias = blobs[1] as Array3D;
+        out = math.add(out as Array3D, bias);
+      }
+
+      return out;
+    }
+
+    case 'elu':
+      return math.elu(input as NDArray);
+
+    case 'relu':
+      return math.relu(input as NDArray);
+
+    case 'prelu':
+      const alpha = blobs[0].as1D() as Array1D;
+      return math.prelu(input as NDArray, alpha);
+
+    case 'tanh':
+      return math.tanh(input as NDArray);
+
+    case 'sigmoid':
+      return math.sigmoid(input as NDArray);
+
+    case 'softmax':
+      const softmaxParam = caffe.SoftmaxParameter.create(layer.softmaxParam);
+      const axis = softmaxParam.axis;
+
+      return math.softmax(input as NDArray, axis);
+
+    case 'concat': {
+      if(layer.name == 'concat2'){
+          const inp = input as Array1D[];
+          let out = inp[0];
+         // Workaround until concat3D(NDArray[]) is supported
+         for (let i = 1; i < inp.length; ++i) {
+             out = math.concat1D(out, inp[i]);
+         }
+         return out;
+      }else {
+          const inp = input as Array3D[];
+          let out = inp[0];
+          // Workaround until concat3D(NDArray[]) is supported
+          for (let i = 1; i < inp.length; ++i) {
+            out = math.concat3D(out, inp[i], 2);
+          }
+          return out;
+        }
+    }
+
+    default:
+      console.debug(layer);
+      throw TypeError(`Layer type ${layer.type} is not implemented`);
+  }
+}
