@@ -40,6 +40,7 @@ urls = (
     '/simonSays', 'simonSays',
     '/getContrastMetric', 'getContrastMetric',
     '/getPredictionPlot', 'getPredictionPlot',
+    '/analyzeData', 'analyzeData',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/comp158_cs_unc_edu_cert.cer"
@@ -89,13 +90,19 @@ class start:
 class getTrialStats:
     def GET(self):
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
-        statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        try:
+            statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        except:   
+            statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsListDL.txt')
         return statsString           
 
 class getPredictionPlot:
     def GET(self):
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
-        canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        try:
+            canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        except:
+            canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsListDL.txt')
         output = StringIO.StringIO()
         canvas.print_png(output)
         #fig.savefig(response, format='png')
@@ -192,6 +199,52 @@ class dataCollect:
 		# Delete data subfolder
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
+
+class analyzeData:
+    def GET(self):
+
+        rawSubPath = 0
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        currentPosition = int(web.input().currentPosition)
+        features = json.loads(web.input().faceFeatures)
+
+        checkForDir(savePath + subfolderPath)
+       
+#        contrastMetrics = {
+#            "leftEye" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+#                },
+#            "rightEye" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+#                },
+#            "face" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+#                },
+#        }
+
+        file = open(savePath + subfolderPath + '/coordsListDL.txt','a+')
+        saveData = {
+            "currentPosition" : str(currentPosition),
+            "coords" : web.input().dlCoords,
+            "perimeterPercent" : web.input().perimeterPercent,
+            "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "contrastMetrics" : web.input().contrastMetrics,
+            "isRingLight" : web.input().isRingLight,
+            "isFullScreen" : web.input().isFullScreen,
+#            "modelDuration" : modelDuration,
+#            "totalDuration" : time.time() - startCaptureTime,
+            "aspectDim" : web.input().aspectDim,
+            "faceWidth" : features["face"][3],
+            "eyeWidth" : features["leftEye"][3],
+            }
+        file.write(json.dumps(saveData) + '\n')
+        file.close()
+
+        return 1
+
 
 class cancelDataCollect:
     def GET(self):

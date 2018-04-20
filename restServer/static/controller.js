@@ -36,6 +36,7 @@ let CONTROLLER = {
     realTimeURL: "/getCoordsFast",
 
     saveRequestURL: "/dataCollect",
+    analyzeRequestURL: "/analyzeData",
     saveSubPathURL: "/start",
     getTrialStatsURL: "/getTrialStats",
     contrastMetricURL: "/getContrastMetric",
@@ -130,6 +131,44 @@ let CONTROLLER = {
         }
 	},
 
+    captureAtPointWithDL: (point, perimeterPercent) => {
+        let method = "GET";
+        let url = CONTROLLER.serverURL + CONTROLLER.analyzeRequestURL;
+        if(parseInt(point)-point == 0){
+            let numCaptures = 0;
+            let maxCaptures = 3;
+            let waitTime = 500;
+            return new Promise((resolve, reject)=> {
+                let captureTimeout = setInterval(()=>{
+                    if(numCaptures < maxCaptures){
+                        numCaptures += 1;
+                        CONTROLLER.getAnalyzeData(point, perimeterPercent).then((data)=>{
+                            CONTROLLER.getRequest(method, url, data).then((coords) => {
+                                if(CONTROLLER.isCanceled){
+                                    CONTROLLER.cancelDataCollectRequest();
+                                    clearTimeout(captureTimeout);
+                                    resolve()
+                                    return;
+                                }
+                                if(CONTROLLER.isDone){
+                                    DISPLAY.showTrialStats();
+                                    CONTROLLER.getPredictionPlot();
+                                }
+                            });
+                        });
+                    }else{
+                        clearTimeout(captureTimeout);
+                        resolve();
+                    }
+                }, waitTime);
+            });
+        }else{
+            return new Promise((resolve, reject) => {
+                resolve()
+            });
+        }
+    },
+
     checkConsistent: (quadrant) =>{
     	if(CONTROLLER.debouncerArray.length == 0){
     		throw "debouncerArray has no length. Should not have been called yet."
@@ -148,6 +187,8 @@ let CONTROLLER = {
         CONTROLLER.isDone = false;
 		let currentPoint = -1;
 		let revCounter = 0; 
+
+        MODEL.contrastMetrics = null;    
         let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
@@ -207,19 +248,19 @@ let CONTROLLER = {
 
             newStep.then(()=>{
                 if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) / Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
-                    CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
-                        CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-                    });    
+                    if(CONTROLLER.useDLMODEL){
+                        CONTROLLER.captureAtPointWithDL(currentPoint, perimeterPercent).then(()=>{
+                            CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                        });
+                    }else {
+                        CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
+                            CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
+                        });
+                    }    
                 }else {
                     CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
                 }
 			});
-
-            // DISPLAY.drawRectPoint(currentPoint, perimeterPercent)
-            // CONTROLLER.captureAtPoint(currentPoint, perimeterPercent).then(()=>{
-            //     CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
-            // });
-
 		}
 	},
 
@@ -447,7 +488,7 @@ let CONTROLLER = {
                 console.log("Right Eye (HS, HFM): (" + parseFloat(metricsJSON['rightEye']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['rightEye']['hfmMetric']).toFixed(2) + ")");
                 console.log("Face (HS, HFM): (" + parseFloat(metricsJSON['face']['hsMetric']).toFixed(2) + ', ' + parseFloat(metricsJSON['face']['hfmMetric']).toFixed(2) + ")");
 
-                resolve(outputString);
+                resolve(metricsJSON);
             });
         });
 
@@ -513,10 +554,34 @@ let CONTROLLER = {
             isRingLight: document.getElementById('ringLightSetting').value,
             isFullScreen: (!window.screenTop && !window.screenY),
             aspectDim: [window.innerHeight, window.innerWidth].toString(),
-            dlModelCoords: DLMODEL.getCoords(),
         };
 
         return data;
+    },
+
+    getAnalyzeData: async (point, perimeterPercent) => {
+        let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+        let features = JSON.parse(TRACKER.getFormatFaceFeatures());
+        features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
+        features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
+        let featuresString = JSON.stringify(features);
+
+        if(MODEL.contrastMetrics == null){
+            MODEL.contrastMetrics = JSON.stringify(await CONTROLLER.getContrastMetric())
+        }
+        
+        let data = {
+            faceFeatures: featuresString,
+            currentPosition: point,
+            contrastMetrics: MODEL.contrastMetrics,
+            saveFullSubPath: CONTROLLER.saveFullSubPath,
+            perimeterPercent: perimeterPercent,
+            isRingLight: document.getElementById('ringLightSetting').value,
+            isFullScreen: (!window.screenTop && !window.screenY),
+            aspectDim: [window.innerHeight, window.innerWidth].toString(),
+            dlCoords: DLMODEL.getCoords().toString(),
+        };
+        return data
     },
 
     getTrialStats: () => {
@@ -527,7 +592,7 @@ let CONTROLLER = {
                 saveFullSubPath: CONTROLLER.saveFullSubPath,
             };
             CONTROLLER.getRequest(method, url, data).then((jsonS)=>{
-                stats = JSON.parse(jsonS);
+                stats = JSON.parse(jsonS.replace(/NaN/g,"\"null\""));
                 resolve(stats);
             });
         });

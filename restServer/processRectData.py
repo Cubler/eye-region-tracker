@@ -160,8 +160,12 @@ def corr(t,tP):
 		return numer/denom
 
 def coordsToXY(coords):
-	(x, y) = coords.replace(',','').replace('\n','').split(" ")
-	return (float(x), float(y))
+    try:
+        (x, y) = coords.replace(',','').replace('\n','').split(" ")
+        return (float(x), float(y))
+    except:
+        (x, y) = coords.replace('\n','').split(",")
+        return (float(x), float(y))
 
 def filterByPoint(_x, _y, _p, point):
     zeroIndices = np.where(_p == point)
@@ -402,8 +406,9 @@ def readData(path):
 
 
 		except:
-			(point,x,y) = line.replace(',','').replace('\n','').split(" ")
-			(point,x,y) = (float(point), float(x), float(y))
+			entryJSON = json.loads(line);
+			(x,y) = coordsToXY(entryJSON['coords'])
+			point = float(entryJSON['currentPosition'])
 
 			pointList.append(point)
 			xList.append(x)
