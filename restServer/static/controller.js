@@ -70,7 +70,7 @@ let CONTROLLER = {
 
     // Preforms a one time request to get and show coordinates from the server.
     capture: () => {
-        MODEL.userSequence = [];
+        UTIL.userSequence = [];
         CONTROLLER.isCanceled = false;
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
@@ -82,7 +82,7 @@ let CONTROLLER = {
         };
 
         CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToQuadrant(coords);
+            let newQuadrant = UTIL.coordsToQuadrant(coords);
             DISPLAY.showFeedback(newQuadrant);
         });
     },
@@ -188,7 +188,7 @@ let CONTROLLER = {
 		let currentPoint = -1;
 		let revCounter = 0; 
 
-        MODEL.contrastMetrics = null;    
+        UTIL.contrastMetrics = null;    
         let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
         if(isFullScreenConfirm){
             CONTROLLER.requestFullScreen(document.documentElement);
@@ -297,7 +297,7 @@ let CONTROLLER = {
     },
 
     downloadPhoto: (source) => {
-    	[leftAvg, rightAvg] = MODEL.getEdgeMetric();
+    	[leftAvg, rightAvg] = UTIL.getEdgeMetric();
     	let dataURL = DISPLAY.getPicToDataURL();
     	source.href = dataURL;
     	let features = JSON.parse(TRACKER.getFormatFaceFeatures());
@@ -354,7 +354,7 @@ let CONTROLLER = {
     },
 
     getActionFeedbackHandler: (coords, lastQuadrant) => {
-        let newQuadrant = MODEL.coordsToQuadrant(coords);
+        let newQuadrant = UTIL.coordsToQuadrant(coords);
         let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
         if(debouncedQuadrant == -1){
             // Noisy feedback. Continue getting feedback.
@@ -386,7 +386,7 @@ let CONTROLLER = {
     },
 
     getCenter: () => {
-        MODEL.centerList = [];
+        UTIL.centerList = [];
     	DISPLAY.showComment("Look at the center point please",1000).then(()=>{
     		DISPLAY.drawRectPoint(0);
     		CONTROLLER.getCenterRequests().then(() => {
@@ -410,7 +410,7 @@ let CONTROLLER = {
                                 });
                             })
                             wait.then((coords)=>{
-                                MODEL.centerList.push(MODEL.parseCoords(coords));                            });
+                                UTIL.centerList.push(UTIL.parseCoords(coords));                            });
                         }else {
 
                             let method = "GET";
@@ -423,7 +423,7 @@ let CONTROLLER = {
     				        };
 
     				        CONTROLLER.getRequest(method, url, data).then((coords) => {
-    				         	MODEL.centerList.push(MODEL.parseCoords(coords));
+    				         	UTIL.centerList.push(UTIL.parseCoords(coords));
     				        });
                         }
 		    		}else{
@@ -459,7 +459,7 @@ let CONTROLLER = {
         }
 
         CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = MODEL.coordsToLeftRight(coords);
+            let newQuadrant = UTIL.coordsToLeftRight(coords);
             let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
             
             if(CONTROLLER.debouncerArray.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
@@ -505,7 +505,7 @@ let CONTROLLER = {
     // Sets a new sequence with the sequence length coming from the user input.
     getNewSequence: () => {
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
-        MODEL.setNewSequence(maxSeqLen);
+        UTIL.setNewSequence(maxSeqLen);
     },
 
     // Returns a promise for a server request.
@@ -540,7 +540,7 @@ let CONTROLLER = {
     },
 
     getSaveData: (point, perimeterPercent) => {
-        let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+        let [leftAvg, rightAvg] = UTIL.getEdgeMetric();
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
         features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
         features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
@@ -560,20 +560,20 @@ let CONTROLLER = {
     },
 
     getAnalyzeData: async (point, perimeterPercent) => {
-        let [leftAvg, rightAvg] = MODEL.getEdgeMetric();
+        let [leftAvg, rightAvg] = UTIL.getEdgeMetric();
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
         features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
         features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
         let featuresString = JSON.stringify(features);
 
-        if(MODEL.contrastMetrics == null){
-            MODEL.contrastMetrics = JSON.stringify(await CONTROLLER.getContrastMetric())
+        if(UTIL.contrastMetrics == null){
+            UTIL.contrastMetrics = JSON.stringify(await CONTROLLER.getContrastMetric())
         }
         
         let data = {
             faceFeatures: featuresString,
             currentPosition: point,
-            contrastMetrics: MODEL.contrastMetrics,
+            contrastMetrics: UTIL.contrastMetrics,
             saveFullSubPath: CONTROLLER.saveFullSubPath,
             perimeterPercent: perimeterPercent,
             isRingLight: document.getElementById('ringLightSetting').value,
@@ -600,7 +600,7 @@ let CONTROLLER = {
 
     // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
-        MODEL.userSequence = [];
+        UTIL.userSequence = [];
         CONTROLLER.clearDebouncer();
         CONTROLLER.debouncerLength = parseInt($('#debouncerLength').val());
         CONTROLLER.isCanceled = false;
@@ -647,7 +647,7 @@ let CONTROLLER = {
     },
 
     getUserFeedbackHandler: (coords, round, isLoopInput, lastQuadrant) => {
-        let newQuadrant = MODEL.coordsToQuadrant(coords);
+        let newQuadrant = UTIL.coordsToQuadrant(coords);
         let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
         
         if(debouncedQuadrant == -1){
@@ -659,14 +659,14 @@ let CONTROLLER = {
                 // If there hasn't been a feedback from a user yet (since lastQuadrant =-1) or 
                 // if the returned quadrant is different from the current quadrant
 
-                MODEL.userSequence.push(debouncedQuadrant);
+                UTIL.userSequence.push(debouncedQuadrant);
                 DISPLAY.showFeedback(debouncedQuadrant);
 
-                if(MODEL.isSequenceMatching(MODEL.sequence, MODEL.userSequence)){
+                if(UTIL.isSequenceMatching(UTIL.sequence, UTIL.userSequence)){
                     // (Hit) New quadrant is the correct next quadrant in the sequence
-                    MODEL.updateScore(CONTROLLER.hitPoints);
+                    UTIL.updateScore(CONTROLLER.hitPoints);
 
-                    if(MODEL.sequence.length != 0 && MODEL.userSequence.length == round){
+                    if(UTIL.sequence.length != 0 && UTIL.userSequence.length == round){
                         // Round Complete, trigger event
                         setTimeout(()=> {
                             DISPLAY.showComment("Round Complete!").then(() => {
@@ -683,15 +683,15 @@ let CONTROLLER = {
                     }
                 }else{
                     // (Miss) New quadrant is not the correct next quadrant in the sequence
-                    MODEL.userSequence.pop();
+                    UTIL.userSequence.pop();
 
 
-                    if(MODEL.userSequence.length == 0 || 
-                        debouncedQuadrant != MODEL.userSequence[MODEL.userSequence.length-1]){  
+                    if(UTIL.userSequence.length == 0 || 
+                        debouncedQuadrant != UTIL.userSequence[UTIL.userSequence.length-1]){  
                         // The current loop is a transition to a new, incorrect, quadrant 
                         // (ignoring a transition to the most recent correct quadrant) and 
                         // therefore a new miss.
-                        MODEL.updateScore(CONTROLLER.missPoints);
+                        UTIL.updateScore(CONTROLLER.missPoints);
                     }
 
                     if(isLoopInput){
@@ -752,9 +752,9 @@ let CONTROLLER = {
     roundCompleteHandler: (event) => {
     	let round = event.detail+1;
 
-    	if(round <= MODEL.sequence.length){
+    	if(round <= UTIL.sequence.length){
 		    DISPLAY.showComment("Next Sequence").then(() => {
-		    	DISPLAY.showSequence(MODEL.sequence.slice(0,round)).then(() => {
+		    	DISPLAY.showSequence(UTIL.sequence.slice(0,round)).then(() => {
 		    		DISPLAY.showComment("Get Ready!").then(() => {
 		    			CONTROLLER.getUserFeedbackCoords(round);
 		    		});
@@ -835,9 +835,9 @@ let CONTROLLER = {
 
     // Called when the user decides to start the game. Starts a new SimonSays game
     startSimonSays: () => {
-        MODEL.clearScore();
+        UTIL.clearScore();
         let maxSeqLen = parseInt(document.getElementById("sequenceLength").value);
-        MODEL.setNewSequence(maxSeqLen);
+        UTIL.setNewSequence(maxSeqLen);
         CONTROLLER.triggerRoundComplete(0);
     },
 
