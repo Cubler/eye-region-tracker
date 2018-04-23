@@ -5,7 +5,8 @@
 *.py~
 **/privatePics
 caffejs/*
-static/models/*
+static/models/weights/*
 **/ssl
 run.py
-
+httpsPassword
+outputDiff.py

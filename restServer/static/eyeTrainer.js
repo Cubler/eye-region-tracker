@@ -45,7 +45,7 @@ $(document).ready(() => {
     });
 
     $('#getEdgeMetric').click(()=>{
-        MODEL.getEdgeMetric();
+        UTIL.getEdgeMetric();
     });
 
     $('#collectData').click(()=>{

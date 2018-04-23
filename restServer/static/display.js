@@ -86,7 +86,7 @@ let DISPLAY = {
     //      0: center of the screen
     //      1-4: the corresponding algebraic quadrants 
 	drawRectPoint: (point, perimeterPercent = 1) => {
-		let [x, y]  = MODEL.getCanvasPointOffset(point, perimeterPercent);
+		let [x, y]  = UTIL.getCanvasPointOffset(point, perimeterPercent);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
@@ -133,7 +133,7 @@ let DISPLAY = {
 
         DISPLAY.animationContext.strokeRect(x*xPicOffset, y*yPicOffset, picWidth, picHeight);
 
-        let msg = new SpeechSynthesisUtterance(MODEL.words[audioID]);
+        let msg = new SpeechSynthesisUtterance(UTIL.words[audioID]);
         window.speechSynthesis.speak(msg);
     },
 
@@ -160,7 +160,7 @@ let DISPLAY = {
     showDebounceProgress: () => {
         let count = CONTROLLER.getDebounceProgress(CONTROLLER.debouncerArray);
         let quadrant = CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
-        let [x,y] = MODEL.getCanvasPointOffset(quadrant, 0.9);
+        let [x,y] = UTIL.getCanvasPointOffset(quadrant, 0.9);
         DISPLAY.showCommentAt(count,x,y);
     },
 
@@ -176,7 +176,7 @@ let DISPLAY = {
 
     // Given a quadrant, color the quadrant and play its unique sound.
     showFeedback: (quadrant, isSound=true) => {
-        let [x,y,color,audioID] = MODEL.getDisplayQuadrantInfo(quadrant);
+        let [x,y,color,audioID] = UTIL.getDisplayQuadrantInfo(quadrant);
         let soundElement = document.getElementById(audioID);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
@@ -282,8 +282,8 @@ let DISPLAY = {
     transitionRecPoint: (prevPoint, currPoint, perimeterPercent) => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
 
-        let [x1, y1]  = MODEL.getCanvasPointOffset(prevPoint,perimeterPercent);
-        let [x2, y2]  = MODEL.getCanvasPointOffset(currPoint,perimeterPercent);
+        let [x1, y1]  = UTIL.getCanvasPointOffset(prevPoint,perimeterPercent);
+        let [x2, y2]  = UTIL.getCanvasPointOffset(currPoint,perimeterPercent);
         let xDiff = -(x1*DISPLAY.xoffset-x2*DISPLAY.xoffset)
         let yDiff = -(y1*DISPLAY.yoffset-y2*DISPLAY.yoffset)
         let stepRatio = 0.05

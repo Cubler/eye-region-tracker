@@ -18,6 +18,8 @@ let MODEL = {
     // Only will ever be a partial sequence of the true sequence.
     // Used to determine how far and what is the next correct sequence.
 	userSequence: [],
+    coordList: [],
+    contrastMetrics: null,
 
     words: {
         "audio1": "Not",
@@ -274,9 +276,13 @@ let MODEL = {
             x = parseFloat(x.trim())
             y = parseFloat(y.trim())
             return [x,y]
-        }else {
+        }else if(Array.isArray(coords)){
             return coords;
-        }
+        }else{
+            // Error
+            throw "Coords are neither a string or an array.";
+        } 
+
 	},
 
     scaleEyeBox: ([x,y,boxWidth,boxHeight], widthFactor, heightFactor) => {

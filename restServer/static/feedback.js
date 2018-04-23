@@ -54,7 +54,7 @@ $(document).ready(() => {
     });
 
     $('#getEdgeMetric').click(()=>{
-        MODEL.getEdgeMetric();
+        UTIL.getEdgeMetric();
         CONTROLLER.getContrastMetric().then((outputString)=> {
             document.getElementById('coordsList').value = outputString;
         });

@@ -2,10 +2,10 @@
 
 import web
 import runModel
-import processRectData
+import processData as pd
 import contrastMetrics as cm
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
-import myInputSetUp
+import inputSetup
 from web.wsgiserver import CherryPyWSGIServer
 from cheroot.server import HTTPServer
 from cheroot.ssl.builtin import BuiltinSSLAdapter
@@ -40,6 +40,7 @@ urls = (
     '/simonSays', 'simonSays',
     '/getContrastMetric', 'getContrastMetric',
     '/getPredictionPlot', 'getPredictionPlot',
+    '/analyzeData', 'analyzeData',
 )
 
 CherryPyWSGIServer.ssl_certificate = "./ssl/comp158_cs_unc_edu_cert.cer"
@@ -89,13 +90,19 @@ class start:
 class getTrialStats:
     def GET(self):
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
-        statsString = processRectData.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        try:
+            statsString = pd.accuracyForFile(savePath + subfolderPath + '/coordsList.txt')
+        except:   
+            statsString = pd.accuracyForFile(savePath + subfolderPath + '/coordsListDL.txt')
         return statsString           
 
 class getPredictionPlot:
     def GET(self):
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
-        canvas = processRectData.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        try:
+            canvas = pd.getCanvasFromCoordList(savePath + subfolderPath + '/coordsList.txt')
+        except:
+            canvas = pd.getCanvasFromCoordList(savePath + subfolderPath + '/coordsListDL.txt')
         output = StringIO.StringIO()
         canvas.print_png(output)
         #fig.savefig(response, format='png')
@@ -108,7 +115,7 @@ class getContrastMetric:
         imageBytes = io.BytesIO(base64.b64decode(imgstr))
         image = Image.open(imageBytes)
         imageArray = np.array(image)[:,:,:]
-        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        [leftEyePic, rightEyePic, facePic, faceGrid] = inputSetup.setUpNoSave(imageArray, web.input().faceFeatures)
         contrastMetrics = {
             "leftEye" : {
                 "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
@@ -136,7 +143,7 @@ class dataCollect:
         image = Image.open(imageBytes)
         imageArray = np.array(image)[:,:,:]
 
-        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        [leftEyePic, rightEyePic, facePic, faceGrid] = inputSetup.setUpNoSave(imageArray, web.input().faceFeatures)
         modelStartTime = time.time()    
         output = runModel.runFast(leftEyePic, rightEyePic, facePic, faceGrid)
         modelDuration = time.time() - modelStartTime
@@ -193,6 +200,52 @@ class dataCollect:
         print("Total Capture Time: %.2f" % (time.time() - startCaptureTime))
         return output
 
+class analyzeData:
+    def GET(self):
+
+        rawSubPath = 0
+        subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
+        currentPosition = int(web.input().currentPosition)
+        features = json.loads(web.input().faceFeatures)
+
+        checkForDir(savePath + subfolderPath)
+       
+#        contrastMetrics = {
+#            "leftEye" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(leftEyePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(leftEyePic))
+#                },
+#            "rightEye" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(rightEyePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(rightEyePic))
+#                },
+#            "face" : {
+#                "hsMetric" : cm.hsMetric(cm.rgb2flatGray(facePic)),
+#                "hfmMetric" : cm.hfmMetric(cm.rgb2flatGray(facePic))
+#                },
+#        }
+
+        file = open(savePath + subfolderPath + '/coordsListDL.txt','a+')
+        saveData = {
+            "currentPosition" : str(currentPosition),
+            "coords" : web.input().dlCoords,
+            "perimeterPercent" : web.input().perimeterPercent,
+            "eyeMetric" : [features['leftEyeMetric'], features['rightEyeMetric']],
+            "contrastMetrics" : web.input().contrastMetrics,
+            "isRingLight" : web.input().isRingLight,
+            "isFullScreen" : web.input().isFullScreen,
+#            "modelDuration" : modelDuration,
+#            "totalDuration" : time.time() - startCaptureTime,
+            "aspectDim" : web.input().aspectDim,
+            "faceWidth" : features["face"][3],
+            "eyeWidth" : features["leftEye"][3],
+            }
+        file.write(json.dumps(saveData) + '\n')
+        file.close()
+
+        return 1
+
+
 class cancelDataCollect:
     def GET(self):
         subfolderPath = web.ctx['ip'] + '/' + web.input().saveFullSubPath
@@ -214,7 +267,7 @@ class getCoordsFast:
         image = Image.open(imageBytes)
         imageArray = np.array(image)[:,:,:]
 
-        [leftEyePic, rightEyePic, facePic, faceGrid] = myInputSetUp.setUpNoSave(imageArray, web.input().faceFeatures)
+        [leftEyePic, rightEyePic, facePic, faceGrid] = inputSetup.setUpNoSave(imageArray, web.input().faceFeatures)
 
         global histogramEq        
         if(histogramEq):
@@ -235,7 +288,7 @@ class model:
     def GET(self):
         web.header('Access-Control-Allow-Origin', '*')
         web.header('Access-Control-Allow-Credentials', 'true')
-        setup = myInputSetUp.setUp()
+        setup = inputSetup.setUp()
         output = runModel.run()
         #image = open('./myData/face/0.jpg','rb').read()
         return output

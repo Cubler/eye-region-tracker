@@ -55,7 +55,7 @@ let DLMODEL = {
     },
 
     getCoords: () => {
-        var [imageLeft, imageRight, imageFace, faceGrid] = MODEL.getModelInput();
+        var [imageLeft, imageRight, imageFace, faceGrid] = UTIL.getModelInput();
         [imageLeft, imageRight, imageFace, faceGrid] = DLMODEL.formatModelInput(imageLeft, imageRight, imageFace, faceGrid)
 
         var output = DLMODEL.model.predict([imageLeft, imageRight, imageFace, faceGrid], DLMODEL.untilLayer, (n,l,a) => { });
