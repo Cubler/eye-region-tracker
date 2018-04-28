@@ -6,6 +6,7 @@ let DLMODEL = {
 	model : null,
     untilLayer : undefined,
     dl : deeplearnCaffe.dl,
+    loaded: false,
 
 
 	setup: () => {
@@ -14,10 +15,14 @@ let DLMODEL = {
 
 		DLMODEL.model = new deeplearnCaffe.CaffeModel(DLMODEL.caffemodelUrl, DLMODEL.prototxtUrl)
         DLMODEL.loadModel().then(()=>{
+            DLMODEL.loaded = true;
             console.log("model loaded")
         });
 	},
 
+    // Loads the model and the mean images from .prototxt, storing the mean images in
+    // their corresponding model.variables location so they can be used in the input layer 
+    // of model.predict()
     loadModel: async () => {
         if (DLMODEL.dl == null) {
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -37,6 +42,8 @@ let DLMODEL = {
 
     },
 
+    // Given the left, right, and face images as ImageData and facegrid as an array,
+    // returns the inputs for the model formated to align correctly with the neural network filters
     formatModelInput: (l,r,f,g) => {
         var inputLeft = DLMODEL.dl.Array3D.fromPixels(l);
         var inputRight = DLMODEL.dl.Array3D.fromPixels(r)
@@ -55,14 +62,20 @@ let DLMODEL = {
     },
 
     getCoords: () => {
-        var [imageLeft, imageRight, imageFace, faceGrid] = UTIL.getModelInput();
-        [imageLeft, imageRight, imageFace, faceGrid] = DLMODEL.formatModelInput(imageLeft, imageRight, imageFace, faceGrid)
+        if(!DLMODEL.loaded){
+            alert('Please wait for the model to load')
+            return [0,0];
+        }else {
 
-        var output = DLMODEL.model.predict([imageLeft, imageRight, imageFace, faceGrid], DLMODEL.untilLayer, (n,l,a) => { });
-        // output.getValuesAsync().then((coords)=>{
-        //     resolve(coords);
-        // });
-        return output.getValues();
+            var [imageLeft, imageRight, imageFace, faceGrid] = UTIL.getModelInput();
+            [imageLeft, imageRight, imageFace, faceGrid] = DLMODEL.formatModelInput(imageLeft, imageRight, imageFace, faceGrid)
+
+            var output = DLMODEL.model.predict([imageLeft, imageRight, imageFace, faceGrid], DLMODEL.untilLayer, (n,l,a) => { });
+        
+            // .getValues() will block and take on the order of 0.3 seconds to resolve
+            // .getValuesAsync() is an alternative, or you can promise around .getCoords()
+            return output.getValues();
+        }
     },
 }
 

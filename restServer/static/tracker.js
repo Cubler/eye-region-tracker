@@ -8,17 +8,78 @@ let TRACKER = {
 	rightEyeBoxCorner : [0,0],
 	trackingTask: null,
 
-	edgeDetection: (imageData) => {
+	saveCanvas: null,
+	saveContext: null,
+	saveVid: null,
+	saveVidWidth: 1280,
+    saveVidHeight: 720,
+    trackCanvas: null,
+    trackContext: null,
+    trackVid: null,
+    trackVidHeight: 240,
+    trackVidWidth: 320,
+    videoWRatio: null,
+    videoHRatio: null,
+
+    showFaceFeatures: false,
+
+  
+    
+
+	createVidElements: () => {
+		TRACKER.trackVid = document.createElement('video');
+		TRACKER.trackVid.id = 'trackVid';
+		TRACKER.trackVid.width = TRACKER.trackVidWidth;
+		TRACKER.trackVid.height = TRACKER.trackVidHeight;
+
+		TRACKER.saveVid = document.createElement('video');
+		TRACKER.saveVid.width = TRACKER.saveVidWidth;
+		TRACKER.saveVid.height = TRACKER.saveVidHeight;
+
+		TRACKER.saveCanvas = document.createElement('canvas');
+		TRACKER.saveCanvas.width = TRACKER.saveVidWidth;
+		TRACKER.saveCanvas.height = TRACKER.saveVidHeight;
+
+		TRACKER.trackCanvas = document.createElement('canvas');
+		TRACKER.trackCanvas.width = TRACKER.trackVidWidth;
+		TRACKER.trackCanvas.height = TRACKER.trackVidHeight;
+
+		TRACKER.saveContext = TRACKER.saveCanvas.getContext('2d');
+		TRACKER.trackContext = TRACKER.trackCanvas.getContext('2d');
+
+		TRACKER.videoWRatio = TRACKER.saveVidWidth/TRACKER.trackVidWidth;
+		TRACKER.videoHRatio = TRACKER.saveVidHeight/TRACKER.trackVidHeight;
+
+		document.body.appendChild(TRACKER.trackVid);
+	},
+
+	drawLandmarks: ([lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
+
+        TRACKER.trackContext.strokeStyle = '#a64ceb';
+        TRACKER.trackContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
+        TRACKER.trackContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
+        TRACKER.trackContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
+
+        for(let l in landmarks){
+                TRACKER.trackContext.beginPath();
+                TRACKER.trackContext.fillStyle = "#fff"
+                TRACKER.trackContext.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
+                TRACKER.trackContext.fill();
+        }
+    },
+
+    edgeDetection: (imageData) => {
 		let edgeData = tracking.Image.sobel(imageData.data, imageData.width, imageData.height);
 		return [edgeData , imageData.width, imageData.height]
 	},
 
 	// Returns the imageData object of the desired box on the saveCanvas
 	getCropedRegion: ([x,y,boxWidth,boxHeight]) => {
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        let imageData = DISPLAY.saveContext.getImageData(x,y, boxWidth, boxHeight);
+        TRACKER.saveContext.drawImage(TRACKER.saveVid, 0, 0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
+        let imageData = TRACKER.saveContext.getImageData(x,y, boxWidth, boxHeight);
         return imageData;
 	},
+
 
 	// Maps the points saved from the detection canvas to the corresponding points on the saveCanvas
 	// and formats them into a JSON String
@@ -42,7 +103,23 @@ let TRACKER = {
 	    return features;
 	},
 
-    myTrackerCallback: (landmarks) => {
+	getModelPics: (features) => {
+        let wholeImage = TRACKER.getSaveCanvasImageData();
+        let imageLeft = TRACKER.saveContext.getImageData.apply(TRACKER.saveContext, features['leftEye']);
+        let imageRight = TRACKER.saveContext.getImageData.apply(TRACKER.saveContext, features['rightEye']);
+        let imageFace = TRACKER.saveContext.getImageData.apply(TRACKER.saveContext, features['face']);
+        return [wholeImage, imageLeft, imageRight, imageFace]
+    },
+
+    getSaveCanvasImageData: () => {
+        TRACKER.saveContext.drawImage(TRACKER.saveVid, 0, 0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
+        return TRACKER.saveContext.getImageData(0, 0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
+    },
+
+	myTrackerCallback: (landmarks) => {
+    	// Extracts the array of points that coorespond to the left and right eye, 
+    	// and the face. The slice index, correspond to the indexes for trackingjs's features
+    	
         let leftArray = landmarks.slice(23,26);
         let rightArray = landmarks.slice(19,22);
         let faceArray = landmarks.slice(0,15);
@@ -50,11 +127,14 @@ let TRACKER = {
         if(landmarks.length < 2){
 			return;
 		}else{
-       
+       		
         	TRACKER.setFeatureBoxes(leftArray, rightArray, faceArray);
-        	DISPLAY.drawLandmarks(TRACKER.leftEyeBoxCorner, 
+        	if(TRACKER.showFaceFeatures){
+			    TRACKER.trackContext.clearRect(0,0,TRACKER.trackVidWidth, TRACKER.trackVidHeight);
+			    TRACKER.drawLandmarks(TRACKER.leftEyeBoxCorner, 
         		TRACKER.rightEyeBoxCorner, TRACKER.faceBoxCorner, TRACKER.eyeBoxLength,
         		TRACKER.faceBoxLength, landmarks)
+        	}
         }
     },
 
@@ -77,17 +157,20 @@ let TRACKER = {
     },
 
 
+
+
+
 	setup: () => {
 		let tracker = new tracking.LandmarksTracker();
 		tracker.setInitialScale(4);
 		tracker.setStepSize(2);
 		tracker.setEdgesDensity(0.1);
 
-		TRACKER.trackingTask = tracking.track('#video', tracker, { camera: true });
+		TRACKER.createVidElements();
+
+		TRACKER.trackingTask = tracking.track('#'+TRACKER.trackVid.id, tracker, { camera: true });
 
 		tracker.on('track', function(event) {
-
-		    DISPLAY.videoContext.clearRect(0,0,DISPLAY.videoCanvas.width, DISPLAY.videoCanvas.height);
 
 		    if(!event.data){
 	            return;
@@ -98,18 +181,18 @@ let TRACKER = {
 		    }
 		});
 
-		let constraints = {audio: false, video: {width: 1280, height: 720}};
+		let constraints = {audio: false, video: {width: TRACKER.saveVidWidth, height: TRACKER.saveVidHeight}};
 		navigator.mediaDevices.getUserMedia(constraints).then(function(mediaStream){
-			let video = document.getElementById('saveVideo');
-			video.srcObject = mediaStream;
-			video.onloadedmetadata = function(e){
-				video.play();
+			TRACKER.saveVid.srcObject = mediaStream;
+			TRACKER.saveVid.onloadedmetadata = function(e){
+				TRACKER.saveVid.play();
 			};
 		}).catch(function(err){
 			console.log(err.name +": " + err.message);
 		});
 
 	},
+
 
 	// Given the 2-D points array from the face feature detection, 
 	// returns the centerPoint, length, and width of the closest fitting box

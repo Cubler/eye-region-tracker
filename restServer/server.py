@@ -1,29 +1,29 @@
 #!/usr/bin/python
 
 import web
-import runModel
-import processData as pd
-import contrastMetrics as cm
+#import runModel
+#import processData as pd
+#import contrastMetrics as cm
 # sys.path.append(os.path.abspath('/afs/cs.unc.edu/home/cubler/public_html/inputProcess/caffe/python'))
-import inputSetup
+#import inputSetup
 from web.wsgiserver import CherryPyWSGIServer
-from cheroot.server import HTTPServer
-from cheroot.ssl.builtin import BuiltinSSLAdapter
+#from cheroot.server import HTTPServer
+#from cheroot.ssl.builtin import BuiltinSSLAdapter
 import os
 import time
 import json
-from urlparse import urlparse, parse_qs
-from requests_toolbelt.multipart import decoder
+#from urlparse import urlparse, parse_qs
+#from requests_toolbelt.multipart import decoder
 import io
-import shutil
+#import shutil
 import time
 import base64
-from PIL import Image
-import re
+#from PIL import Image
+#import re
 import numpy as np 
-from skimage import exposure
-from skimage import io as imageIO 
-import StringIO
+#from skimage import exposure
+#from skimage import io as imageIO 
+#import StringIO
 
 urls = (
     '/', 'index',
@@ -43,8 +43,8 @@ urls = (
     '/analyzeData', 'analyzeData',
 )
 
-CherryPyWSGIServer.ssl_certificate = "./ssl/comp158_cs_unc_edu_cert.cer"
-CherryPyWSGIServer.ssl_private_key = "./ssl/comp158_cs_unc_edu.key"
+CherryPyWSGIServer.ssl_certificate = "./ssl/myserver.crt"
+CherryPyWSGIServer.ssl_private_key = "./ssl/myserver.key"
 
 #HTTPServer.ssl_adapter = BuiltinSSLAdapter(
 #    certificate = './ssl/myserver.crt',
