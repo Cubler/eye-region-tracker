@@ -6,7 +6,7 @@ let UTIL = {
 
     // Optional: used to find the center of the screen for calibration 
 	centerList: [],
-    centerCoord: [],
+    centerCoord: [0,-3],
 
     // The current user sequence for any given round. 
     // Only will ever be a partial sequence of the true sequence.
@@ -155,34 +155,33 @@ let UTIL = {
         var Debouncer = {
             length: length,
             sequence: [],
-        };
-
-        Debouncer.prototype = {
-            clearDebouncer: () => {
-                this.sequence = [];
+            clearDebouncer: (debouncer) => {
+                let _this = debouncer;
+                debouncer.sequence = [];
             },
 
-            checkConsistent: (quadrant) =>{
-                if(this.sequence.length == 0){
+            checkConsistent: (quadrant, index, array) =>{
+                if(array.length == 0){
                     throw "debouncerArray has no length. Should not have been called yet.";
                 }else{
-                    return quadrant == this.sequence[this.sequence.length-1];
+                    return quadrant == array[array.length-1];
                 }
             },
 
-            debounce: (newQuadrant) => {
-                if(this.sequence.length == 0){
-                    this.sequence.push(newQuadrant);
+            debounce: (debouncer, newQuadrant) => {
+                let _this = debouncer;
+                if(_this.sequence.length == 0){
+                    _this.sequence.push(newQuadrant);
                     return newQuadrant;
                 }
-                if(this.sequence.length < (this.length)){
+                if(_this.sequence.length < (_this.length)){
                     // Not enough data to determine consistency
-                    this.sequence.push(newQuadrant);
+                    _this.sequence.push(newQuadrant);
                     return -1;
                 }else{
-                    this.sequence = CONTROLLER.shiftArray(this.sequence, -1);
-                    this.sequence.push(newQuadrant);
-                    if(this.sequence.every(this.checkConsistent)){
+                    _this.sequence = CONTROLLER.shiftArray(_this.sequence, -1);
+                    _this.sequence.push(newQuadrant);
+                    if(_this.sequence.every(_this.checkConsistent)){
                         return newQuadrant;
                     }else{
                         // Noisy Array
@@ -191,15 +190,22 @@ let UTIL = {
                 }
             },
 
-            getDebounceProgress: () => {
-                let count = this.sequence.map(this.checkConsistent).lastIndexOf(false);
+            getDebounceProgress: (debouncer) => {
+                let _this = debouncer;
+                let count = _this.sequence.map(_this.checkConsistent).lastIndexOf(false);
                 if(count == -1){
-                    return array.length
+                    return 0
                 }else {
-                    return this.length-(count+1);
+                    return _this.length-(count+1);
                 }
             },
+
+            getRecent: (debouncer) => {
+                let _this = debouncer;
+                return _this.sequence[_this.sequence.length-1]
+            },
         };
+
         return Debouncer
     },
 

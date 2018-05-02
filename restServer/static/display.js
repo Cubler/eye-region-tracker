@@ -14,7 +14,7 @@ let DISPLAY = {
 	canvasOffset: null,
     eps: 0.00001,
     ptSize: 15,
-    saveContext: null,
+    dispContext: null,
     saveWidth: 1280,
     saveHeight: 720,
     scalePics: 1.75,
@@ -62,31 +62,12 @@ let DISPLAY = {
         DISPLAY.animationContext.fillRect(DISPLAY.xoffset,0, DISPLAY.animationContext.canvas.width/2, DISPLAY.animationContext.canvas.height);
     },
 
-    // Draws the eye boxes, the face box, and the landmark point found by the face detection package.
-    // [x,y]: the top left coordinate for the corresponding eye or face box
-    // boxlength: the length of the side of the square for the given feature
-    // landmarks: array of point provided by the face detection package 
-    drawLandmarks: ([lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
-
-        DISPLAY.videoContext.strokeStyle = '#a64ceb';
-        DISPLAY.videoContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
-        DISPLAY.videoContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
-        DISPLAY.videoContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
-
-        for(let l in landmarks){
-                DISPLAY.videoContext.beginPath();
-                DISPLAY.videoContext.fillStyle = "#fff"
-                DISPLAY.videoContext.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
-                DISPLAY.videoContext.fill();
-        }
-    },
-
     // Draws the point in the corner of the appropriate quadrant.
     // Point domain: 
     //      0: center of the screen
     //      1-4: the corresponding algebraic quadrants 
 	drawRectPoint: (point, perimeterPercent = 1) => {
-		let [x, y]  = UTIL.getCanvasPointOffset(point, perimeterPercent);
+		let [x, y]  = CONTROLLER.getCanvasPointOffset(point, perimeterPercent);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
         DISPLAY.animationContext.beginPath();
@@ -94,19 +75,6 @@ let DISPLAY = {
         DISPLAY.animationContext.arc(DISPLAY.xstart+(x*DISPLAY.xoffset),(y*DISPLAY.yoffset)+DISPLAY.ystart,DISPLAY.ptSize,0,2*Math.PI);
 	    DISPLAY.animationContext.fill();
 	},
-
-    // returns the current camera frame as a dataURL
-    getPicToDataURL: () => {
-        document.getElementById("saveCanvas").style.filter="invert(0%)";
-        DISPLAY.saveContext.clearRect(0,0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        return DISPLAY.saveCanvas.toDataURL('image/jpeg');
-    },
-
-    getSaveCanvasImageData: () => {
-        DISPLAY.saveContext.drawImage(DISPLAY.saveVideo, 0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-        return DISPLAY.saveContext.getImageData(0, 0, DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
-    },
 
     // resizes the animation canvas so that it fills the window and is independent of browser.
 	resizeCanvas: () => {
@@ -133,7 +101,7 @@ let DISPLAY = {
 
         DISPLAY.animationContext.strokeRect(x*xPicOffset, y*yPicOffset, picWidth, picHeight);
 
-        let msg = new SpeechSynthesisUtterance(UTIL.words[audioID]);
+        let msg = new SpeechSynthesisUtterance(CONTROLLER.words[audioID]);
         window.speechSynthesis.speak(msg);
     },
 
@@ -158,19 +126,19 @@ let DISPLAY = {
     },
 
     showDebounceProgress: () => {
-        let count = CONTROLLER.getDebounceProgress(CONTROLLER.debouncerArray);
-        let quadrant = CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
-        let [x,y] = UTIL.getCanvasPointOffset(quadrant, 0.9);
+        let count = CONTROLLER.debouncer.getDebounceProgress(CONTROLLER.debouncer);
+        let quadrant = CONTROLLER.debouncer.getRecent(CONTROLLER.debouncer);
+        let [x,y] = CONTROLLER.getCanvasPointOffset(quadrant, 0.9);
         DISPLAY.showCommentAt(count,x,y);
     },
 
     showEdges: () => {
         
-        let imgData = DISPLAY.getSaveCanvasImageData();
+        let imgData = TRACKER.getSaveCanvasImageData();
         let edgeData = TRACKER.edgeDetection(imgData);
-        let edgeImageData = DISPLAY.saveContext.createImageData(DISPLAY.saveCanvas.width, DISPLAY.saveCanvas.height);
+        let edgeImageData = DISPLAY.dispContext.createImageData(DISPLAY.saveWidth, DISPLAY.saveHeight);
         edgeImageData.data.set(new Uint8ClampedArray(edgeData[0]));
-        DISPLAY.saveContext.putImageData(edgeImageData, 0, 0);
+        DISPLAY.dispContext.putImageData(edgeImageData, 0, 0);
         document.getElementById("saveCanvas").style.filter="invert(100%)";
     },
 
@@ -198,9 +166,9 @@ let DISPLAY = {
     },
 
     showImageData: (edgeData, x, y) => {
-        let ctxImageData = DISPLAY.saveContext.createImageData(edgeData[1], edgeData[2]);
+        let ctxImageData = DISPLAY.dispContext.createImageData(edgeData[1], edgeData[2]);
         ctxImageData.data.set(new Uint8ClampedArray(edgeData[0]));
-        DISPLAY.saveContext.putImageData(ctxImageData, x, y);
+        DISPLAY.dispContext.putImageData(ctxImageData, x, y);
     },
 
     // Return a promise that resolves when the the animation for the given sequence
@@ -243,22 +211,17 @@ let DISPLAY = {
 
     // Initializes all variables referring to HTML elements that are needed for Display.js
     setup: () => {
-        DISPLAY.video = document.getElementById('video');
-        DISPLAY.saveVideo = document.getElementById('saveVideo');
+
         DISPLAY.saveCanvas = document.getElementById('saveCanvas');
         DISPLAY.videoCanvas = document.getElementById('videoCanvas');
         DISPLAY.scoreElement = document.getElementById('score');
 
-        DISPLAY.saveContext = document.getElementById('saveCanvas').getContext('2d');
+        DISPLAY.dispContext = document.getElementById('saveCanvas').getContext('2d');
         DISPLAY.videoContext = document.getElementById('videoCanvas').getContext('2d');
         DISPLAY.animationContext = document.getElementById('animationCanvas').getContext('2d');
 
         DISPLAY.saveCanvas.width = DISPLAY.saveWidth
         DISPLAY.saveCanvas.height = DISPLAY.saveHeight
-        DISPLAY.saveVideo.width = DISPLAY.saveWidth
-        DISPLAY.saveVideo.height = DISPLAY.saveHeight
-        DISPLAY.videoWRatio = DISPLAY.saveVideo.clientWidth/DISPLAY.video.clientWidth;
-        DISPLAY.videoHRatio = DISPLAY.saveVideo.clientHeight/DISPLAY.video.clientHeight;
         
         DISPLAY.resizeCanvas();
 
@@ -282,8 +245,8 @@ let DISPLAY = {
     transitionRecPoint: (prevPoint, currPoint, perimeterPercent) => {
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
 
-        let [x1, y1]  = UTIL.getCanvasPointOffset(prevPoint,perimeterPercent);
-        let [x2, y2]  = UTIL.getCanvasPointOffset(currPoint,perimeterPercent);
+        let [x1, y1]  = CONTROLLER.getCanvasPointOffset(prevPoint,perimeterPercent);
+        let [x2, y2]  = CONTROLLER.getCanvasPointOffset(currPoint,perimeterPercent);
         let xDiff = -(x1*DISPLAY.xoffset-x2*DISPLAY.xoffset)
         let yDiff = -(y1*DISPLAY.yoffset-y2*DISPLAY.yoffset)
         let stepRatio = 0.05

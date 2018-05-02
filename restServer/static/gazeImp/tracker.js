@@ -23,12 +23,10 @@ let TRACKER = {
 
     showFaceFeatures: false,
 
-  
-    
-
 	createVidElements: () => {
 		TRACKER.trackVid = document.createElement('video');
 		TRACKER.trackVid.id = 'trackVid';
+		TRACKER.trackVid.autoplay = true;
 		TRACKER.trackVid.width = TRACKER.trackVidWidth;
 		TRACKER.trackVid.height = TRACKER.trackVidHeight;
 
@@ -52,19 +50,22 @@ let TRACKER = {
 
 		document.body.appendChild(TRACKER.trackVid);
 	},
+    // Draws the eye boxes, the face box, and the landmark point found by the face detection package.
+    // [x,y]: the top left coordinate for the corresponding eye or face box
+    // boxlength: the length of the side of the square for the given feature
+    // landmarks: array of point provided by the face detection package 
+	drawLandmarks: (context, [lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
 
-	drawLandmarks: ([lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
-
-        TRACKER.trackContext.strokeStyle = '#a64ceb';
-        TRACKER.trackContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
-        TRACKER.trackContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
-        TRACKER.trackContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
+        context.strokeStyle = '#a64ceb';
+        context.trackContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
+        context.trackContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
+        context.trackContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
 
         for(let l in landmarks){
-                TRACKER.trackContext.beginPath();
-                TRACKER.trackContext.fillStyle = "#fff"
-                TRACKER.trackContext.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
-                TRACKER.trackContext.fill();
+                context.beginPath();
+                context.fillStyle = "#fff"
+                context.arc(landmarks[l][0],landmarks[l][1],1,0,2*Math.PI);
+                context.fill();
         }
     },
 
@@ -84,14 +85,13 @@ let TRACKER = {
 	// Maps the points saved from the detection canvas to the corresponding points on the saveCanvas
 	// and formats them into a JSON String
 	getFormatFaceFeatures: () => {
-        document.getElementById("saveCanvas").style.filter="invert(0%)";
 
-	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.leftEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.rightEyeBoxCorner[1]*DISPLAY.videoHRatio];
-        let [fx,fy] = [TRACKER.faceBoxCorner[0]*DISPLAY.videoWRatio, TRACKER.faceBoxCorner[1]*DISPLAY.videoHRatio];
-	    let eyeBoxSide = TRACKER.eyeBoxLength * DISPLAY.videoWRatio;
-	    let faceBoxSide = TRACKER.faceBoxLength * DISPLAY.videoWRatio;
-	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*DISPLAY.videoWRatio,x[1]*DISPLAY.videoHRatio]);
+	    let [lx,ly] = [TRACKER.leftEyeBoxCorner[0]*TRACKER.videoWRatio, TRACKER.leftEyeBoxCorner[1]*TRACKER.videoHRatio];
+        let [rx,ry] = [TRACKER.rightEyeBoxCorner[0]*TRACKER.videoWRatio, TRACKER.rightEyeBoxCorner[1]*TRACKER.videoHRatio];
+        let [fx,fy] = [TRACKER.faceBoxCorner[0]*TRACKER.videoWRatio, TRACKER.faceBoxCorner[1]*TRACKER.videoHRatio];
+	    let eyeBoxSide = TRACKER.eyeBoxLength * TRACKER.videoWRatio;
+	    let faceBoxSide = TRACKER.faceBoxLength * TRACKER.videoWRatio;
+	    let faceArray = TRACKER.faceArray.map(x=>[x[0]*TRACKER.videoWRatio,x[1]*TRACKER.videoHRatio]);
 
 	    let features = {'leftEye': [lx,ly,eyeBoxSide,eyeBoxSide],
 	                'rightEye': [rx,ry,eyeBoxSide,eyeBoxSide],
@@ -116,6 +116,12 @@ let TRACKER = {
         return TRACKER.saveContext.getImageData(0, 0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
     },
 
+    getPicToDataURL: () => {
+        TRACKER.saveContext.clearRect(0,0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
+        TRACKER.saveContext.drawImage(TRACKER.saveVid, 0, 0, TRACKER.saveCanvas.width, TRACKER.saveCanvas.height);
+        return TRACKER.saveCanvas.toDataURL('image/jpeg');
+    },
+
 	myTrackerCallback: (landmarks) => {
     	// Extracts the array of points that coorespond to the left and right eye, 
     	// and the face. The slice index, correspond to the indexes for trackingjs's features
@@ -131,7 +137,7 @@ let TRACKER = {
         	TRACKER.setFeatureBoxes(leftArray, rightArray, faceArray);
         	if(TRACKER.showFaceFeatures){
 			    TRACKER.trackContext.clearRect(0,0,TRACKER.trackVidWidth, TRACKER.trackVidHeight);
-			    TRACKER.drawLandmarks(TRACKER.leftEyeBoxCorner, 
+			    TRACKER.drawLandmarks(TRACKER.saveContext, TRACKER.leftEyeBoxCorner, 
         		TRACKER.rightEyeBoxCorner, TRACKER.faceBoxCorner, TRACKER.eyeBoxLength,
         		TRACKER.faceBoxLength, landmarks)
         	}
@@ -156,7 +162,19 @@ let TRACKER = {
         TRACKER.faceArray = faceArray;
     },
 
+    getFaceDetect: ()=>{
+    	TRACKER.trackingTask.run();
+    	TRACKER.trackingTask.once('track',function(event) {
 
+		    if(!event.data){
+	            return;
+	        }else{
+		    	event.data.landmarks.forEach(function(landmarks){
+                    TRACKER.myTrackerOnce(landmarks);
+                });
+		    }
+		});
+    },
 
 
 
@@ -169,7 +187,7 @@ let TRACKER = {
 		TRACKER.createVidElements();
 
 		TRACKER.trackingTask = tracking.track('#'+TRACKER.trackVid.id, tracker, { camera: true });
-
+		TRACKER.trackingTask.stop();
 		tracker.on('track', function(event) {
 
 		    if(!event.data){
