@@ -144,7 +144,7 @@ let DISPLAY = {
 
     // Given a quadrant, color the quadrant and play its unique sound.
     showFeedback: (quadrant, isSound=true) => {
-        let [x,y,color,audioID] = UTIL.getDisplayQuadrantInfo(quadrant);
+        let [x,y,color,audioID] = CONTROLLER.getDisplayQuadrantInfo(quadrant);
         let soundElement = document.getElementById(audioID);
 
         DISPLAY.animationContext.clearRect(0,0,DISPLAY.animationContext.canvas.width, DISPLAY.animationContext.canvas.height);
@@ -211,6 +211,11 @@ let DISPLAY = {
 
     // Initializes all variables referring to HTML elements that are needed for Display.js
     setup: () => {
+
+        // $('div.view-frame').append(TRACKER.trackVid)
+        // $('div.view-frame').append(TRACKER.trackCanvas)
+        TRACKER.trackVid.className = "displayFeatures"
+        TRACKER.trackCanvas.className = "displayFeatures"
 
         DISPLAY.saveCanvas = document.getElementById('saveCanvas');
         DISPLAY.videoCanvas = document.getElementById('videoCanvas');

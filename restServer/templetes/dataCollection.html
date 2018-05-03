@@ -17,11 +17,11 @@ $def with (page)
 
 
   <script src="./static/display.js" type="text/javascript"></script>
-  <script src="./static/tracker.js" type="text/javascript"></script>
+  <script src="./static/gazeImp/tracker.js" type="text/javascript"></script>
   <script src="./static/controller.js" type="text/javascript"></script>
-  <script src="./static/util.js" type="text/javascript"></script>
+  <script src="./static/gazeImp/util.js" type="text/javascript"></script>
   <script src="./static/dataCollection.js" type="text/javascript"></script>
-  <script src="./static/dlModel.js" type="text/javascript"></script>
+<!--  <script src="./static/gazeImp/dlModel.js" type="text/javascript"></script> -->
 
 
     <link rel='stylesheet' href='./static/style.css'>
@@ -144,7 +144,7 @@ body {font-family: Arial, Helvetica, sans-serif;}
 <b>5)</b> After three revolutions the tracking will stop and the round will be complete. It will take about 90 seconds.<br>
 <b>6)</b> The rounds differ in how far from the edge of screen the dot traverses. There are 3 trials and you may repeat each of them as many times as you would like. <br>
 <b>7)</b> Please complete all 3 trials (They only take 90 seconds). <br>
-<b>8)</b> After each trail, the accuracy of the system and a plot of the predictions will be reported at the bottom of the page. Check it out! If you have good lighting, trials 1 and 2 should be easily above 80%, with it not unlucky to get 100%.<br> 
+<b>8)</b> After each trail, the accuracy of the system and a plot of the predictions will be reported at the bottom of the page. Check it out! If you have good lighting, trials 1 and 2 should be easily above 80%, with it not unlikely to get 100%.<br> 
 <b>9)</b> Thank You!
   <p>
   </div>
@@ -206,7 +206,7 @@ body {font-family: Arial, Helvetica, sans-serif;}
     <button id="getEdgeMetric">Get Edge Metric</button>
     Eye Edge Average: <input type="text" id="edgeMetric">
     RingLightSetting: <input type="number" id="ringLightSetting" min="0" max="10" value="0">
-<button id="SimonSays" onclick= "window.location.href='https://comp158.cs.unc.edu:8080/feedback'"> Simon Says </button>
+<button id="SimonSays" style="display: none" onclick= "window.location.href='https://comp158.cs.unc.edu:8080/feedback'"> Simon Says </button>
   </div>
 
   <div class="animation">
