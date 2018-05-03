@@ -21,7 +21,7 @@ let TRACKER = {
     videoWRatio: null,
     videoHRatio: null,
 
-    showFaceFeatures: false,
+    showFaceFeatures: true,
 
 	createVidElements: () => {
 		TRACKER.trackVid = document.createElement('video');
@@ -49,7 +49,14 @@ let TRACKER = {
 		TRACKER.videoHRatio = TRACKER.saveVidHeight/TRACKER.trackVidHeight;
 
 		document.body.appendChild(TRACKER.trackVid);
+
+		// Used to display face features on a canvas,
+		// needed for drawlandmarks()
+        TRACKER.trackVid.className = "displayFeatures"
+        TRACKER.trackCanvas.className = "displayFeatures"
+		document.body.appendChild(TRACKER.trackCanvas);
 	},
+
     // Draws the eye boxes, the face box, and the landmark point found by the face detection package.
     // [x,y]: the top left coordinate for the corresponding eye or face box
     // boxlength: the length of the side of the square for the given feature
@@ -57,9 +64,9 @@ let TRACKER = {
 	drawLandmarks: (context, [lx,ly], [rx,ry], [fx,fy], eyeBoxLength, faceBoxLength, landmarks) => {
 
         context.strokeStyle = '#a64ceb';
-        context.trackContext.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
-        context.trackContext.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
-        context.trackContext.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
+        context.strokeRect(lx, ly, eyeBoxLength, eyeBoxLength);
+        context.strokeRect(rx, ry, eyeBoxLength, eyeBoxLength);
+        context.strokeRect(fx, fy, faceBoxLength, faceBoxLength);
 
         for(let l in landmarks){
                 context.beginPath();
@@ -137,7 +144,7 @@ let TRACKER = {
         	TRACKER.setFeatureBoxes(leftArray, rightArray, faceArray);
         	if(TRACKER.showFaceFeatures){
 			    TRACKER.trackContext.clearRect(0,0,TRACKER.trackVidWidth, TRACKER.trackVidHeight);
-			    TRACKER.drawLandmarks(TRACKER.saveContext, TRACKER.leftEyeBoxCorner, 
+			    TRACKER.drawLandmarks(TRACKER.trackContext, TRACKER.leftEyeBoxCorner, 
         		TRACKER.rightEyeBoxCorner, TRACKER.faceBoxCorner, TRACKER.eyeBoxLength,
         		TRACKER.faceBoxLength, landmarks)
         	}

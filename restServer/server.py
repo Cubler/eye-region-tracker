@@ -2,6 +2,7 @@
 
 import web
 import contrastMetrics as cm
+import inputSetup
 from web.wsgiserver import CherryPyWSGIServer
 import os
 import time
@@ -14,12 +15,11 @@ from PIL import Image
 import re
 import numpy as np 
 
-isServerCompute = false;
+isServerCompute = False;
 if(isServerCompute):
     import inputSetup
     import runModel
     import processData as pd
-    import inputSetup
     from skimage import io as imageIO 
     import StringIO
 

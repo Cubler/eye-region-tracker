@@ -10,7 +10,6 @@ let CONTROLLER = {
 
     // Array used to buffer the estimated quadrants when 
     // determining if predictions have been consistent.
-    debouncerArray: [],
 
     // The number of consistent quadrants for the debouncer
     debouncerLength: 2,
@@ -50,7 +49,14 @@ let CONTROLLER = {
 
 	// The server URL to send requests to
 //	serverURL: "https://localhost:3000",
-    serverURL: "https://comp158.cs.unc.edu:8080",
+    serverURL: null,
+
+    words: {
+        "audio1": "Not",
+        "audio2": "Go",
+        "audio3": "Like",
+        "audio4": "Want",
+    },
 
     cancelButtonMethod: () => {
         CONTROLLER.isCanceled = true;
@@ -75,16 +81,31 @@ let CONTROLLER = {
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
+            imgBase64: TRACKER.getPicToDataURL(),
             faceFeatures: TRACKER.getFormatFaceFeatures(),
             currentPosition: null,
             saveSubPath: null,
         };
-
-        CONTROLLER.getRequest(method, url, data).then((coords) => {
-            let newQuadrant = UTIL.coordsToQuadrant(coords);
-            DISPLAY.showFeedback(newQuadrant);
-        });
+        if(CONTROLLER.useDLMODEL){
+            var wait = new Promise((resolve,reject) => {
+                var coords = DLMODEL.getCoords()
+                setTimeout(()=>{
+                    resolve(coords);
+                },CONTROLLER.DLMODELFeedbackDelay)
+            });
+            wait.then((coords)=>{
+                let newQuadrant = UTIL.coordsToQuadrant(coords);
+	            console.log(newQuadrant)
+                DISPLAY.showFeedback(newQuadrant);
+            });
+            
+        }else {
+	        CONTROLLER.getRequest(method, url, data).then((coords) => {
+	            let newQuadrant = UTIL.coordsToQuadrant(coords);
+	            console.log(newQuadrant)
+	            DISPLAY.showFeedback(newQuadrant);
+	        });
+	    }
     },
 
 	captureAtPoint: (point, perimeterPercent) => {
@@ -167,18 +188,6 @@ let CONTROLLER = {
                 resolve()
             });
         }
-    },
-
-    checkConsistent: (quadrant) =>{
-    	if(CONTROLLER.debouncerArray.length == 0){
-    		throw "debouncerArray has no length. Should not have been called yet."
-    	}else{
-    		return quadrant == CONTROLLER.debouncerArray[CONTROLLER.debouncerArray.length-1];
-    	}
-    },
-
-    clearDebouncer: () => {
-    	CONTROLLER.debouncerArray = [];
     },
 
 	collectData: (perimeterPercent = 0.7) => {
@@ -264,31 +273,7 @@ let CONTROLLER = {
 		}
 	},
 
-    // Denoises random inaccurate estimates by requiring debouncerLength number of
-    // constant readings before allowing a change in the state.
-    // Returns the corresponding consistent quadrant or -1 if not consistent 
-    debounce: (newQuadrant) => {
-    	if(CONTROLLER.debouncerArray.length == 0){
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		return newQuadrant;
-    	}
-    	if(CONTROLLER.debouncerArray.length < (CONTROLLER.debouncerLength)){
-    		// Not enough data to determine consistency
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		return -1;
-    	}else{
-			CONTROLLER.debouncerArray = CONTROLLER.shiftArray(CONTROLLER.debouncerArray, -1);
-    		CONTROLLER.debouncerArray.push(newQuadrant);
-    		if(CONTROLLER.debouncerArray.every(CONTROLLER.checkConsistent)){
-    			return newQuadrant;
-    		}else{
-    			// Noisy Array
-    			return -1;
-    		}
-    	}
-    },
-
-    decisionHandler: (event) => {
+     decisionHandler: (event) => {
     	if(event.detail == 1){
     		DISPLAY.showFullColor("#00FF00");
     	}else if(event.detail == 2){
@@ -298,7 +283,7 @@ let CONTROLLER = {
 
     downloadPhoto: (source) => {
     	[leftAvg, rightAvg] = UTIL.getEdgeMetric();
-    	let dataURL = DISPLAY.getPicToDataURL();
+    	let dataURL = TRACKER.getPicToDataURL();
     	source.href = dataURL;
     	let features = JSON.parse(TRACKER.getFormatFaceFeatures());
     	features['leftEyeMetric'] = parseFloat(leftAvg).toFixed(2);
@@ -322,7 +307,7 @@ let CONTROLLER = {
     	let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
+            imgBase64: TRACKER.getPicToDataURL(),
             faceFeatures: TRACKER.getFormatFaceFeatures(),
             currentPosition: null,
             saveSubPath: null,
@@ -354,7 +339,7 @@ let CONTROLLER = {
 
     getActionFeedbackHandler: (coords, lastQuadrant) => {
         let newQuadrant = UTIL.coordsToQuadrant(coords);
-        let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+        let debouncedQuadrant = CONTROLLER.debouncer.debounce(CONTROLLER.debouncer, newQuadrant);
         if(debouncedQuadrant == -1){
             // Noisy feedback. Continue getting feedback.
             DISPLAY.drawActionPics();
@@ -382,6 +367,81 @@ let CONTROLLER = {
                 " newQuadrant: " + newQuadrant + 
                 " debouncedQuadrant: " + debouncedQuadrant);
         }
+    },
+
+    // Given a point such that
+    //      0: center of screen
+    //      1-4: algebraic quadrants
+    // returns the x and y offsets from the origin for that point
+    getCanvasPointOffset: (point, perimeterPercent=1) => {
+        let x = null;
+        let y = null;
+        let p = parseFloat(point)
+        switch(true){
+            case (p<1):
+                    x=p*1;
+                    y=p*(-1);
+                    break;
+            case (p<2):
+                    x=1-((p-1)*2);
+                    y=-1;
+                    break;
+            case (p<3):
+                    x=-1;
+                    y=-1+((p-2)*2);
+                    break;
+            case (p<4):
+                    x=-1+((p-3)*2);
+                    y=1;
+                    break;  
+            case (p<5):
+                    x=1-(p-4)*1;
+                    y=1-(p-4)*1;
+                    break; 
+        }
+        return [x*perimeterPercent,y*perimeterPercent]
+    },
+
+     // given a quadrant
+    getDisplayQuadrantInfo: (quadrant) => {
+        let x = null;
+        let y = null;
+        let color = "#FFFFFF";
+        let audioID = "default";
+
+        switch(parseInt(quadrant)){
+            case 1: 
+                x=0;
+                y=-1;
+                color = "#FF0000";
+                audioID = "audio1";
+                break;
+            case 2: 
+                x=-1;
+                y=-1;
+                color = "#00FF00";
+                audioID = "audio2";
+                break;
+            case 3: 
+                x=-1;
+                y=0;
+                color = "#0000FF";
+                audioID = "audio3";
+                break;  
+            case 4: 
+                x=0;
+                y=0;
+                color = "#FFFF00";
+                audioID = "audio4";
+                break; 
+            default:
+                x=-1;
+                y=-1;
+                color = "#000000";
+                audioID = "default";
+                break;
+        }
+        return [x,y,color,audioID];
     },
 
     getCenter: () => {
@@ -414,7 +474,7 @@ let CONTROLLER = {
                             let method = "GET";
     				        let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
     				        let data = {
-    				            imgBase64: DISPLAY.getPicToDataURL(),
+    				            imgBase64: TRACKER.getPicToDataURL(),
     				            faceFeatures: TRACKER.getFormatFaceFeatures(),
     				            currentPosition: null,
     				            saveSubPath: null,
@@ -435,8 +495,7 @@ let CONTROLLER = {
 
     getConfirm: () => {
     	DISPLAY.drawConfirm();
-    	CONTROLLER.clearDebouncer();
-    	CONTROLLER.debouncerLength = CONTROLLER.confirmLength;
+    	CONTROLLER.debouncer = UTIL.newDebouncer(CONTROLLER.confirmLength);
         CONTROLLER.isCanceled = false;
         CONTROLLER._getConfirm();
     },
@@ -447,7 +506,7 @@ let CONTROLLER = {
     	let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
+            imgBase64: TRACKER.getPicToDataURL(),
             faceFeatures: TRACKER.getFormatFaceFeatures(),
             currentPosition: null,
             saveSubPath: null,
@@ -458,9 +517,9 @@ let CONTROLLER = {
 
         CONTROLLER.getRequest(method, url, data).then((coords) => {
             let newQuadrant = UTIL.coordsToLeftRight(coords);
-            let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+            let debouncedQuadrant = CONTROLLER.debouncer.debounce(CONTROLLER.debouncer, newQuadrant);
             
-            if(CONTROLLER.debouncerArray.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
+            if(CONTROLLER.debouncer.sequence.length < CONTROLLER.confirmLength || debouncedQuadrant == -1){
            		// Noisy feedback. Continue getting feedback.
            		CONTROLLER._getConfirm();
            	}else {
@@ -545,7 +604,7 @@ let CONTROLLER = {
         features['rightEyeMetric'] = parseFloat(rightAvg).toFixed(2);
         let featuresString = JSON.stringify(features);
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
+            imgBase64: TRACKER.getPicToDataURL(),
             faceFeatures: featuresString,
             currentPosition: point,
             saveFullSubPath: CONTROLLER.saveFullSubPath,
@@ -602,8 +661,7 @@ let CONTROLLER = {
     // Starts a new UserFeedback session for a given round.
     getUserFeedbackCoords: (round = -1) => {
         UTIL.userSequence = [];
-        CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = parseInt($('#debouncerLength').val());
+        CONTROLLER.debouncer = UTIL.newDebouncer(parseInt($('#debouncerLength').val()));
         CONTROLLER.isCanceled = false;
     	CONTROLLER._getUserFeedbackCoords(round, true, -1);
     },
@@ -617,7 +675,7 @@ let CONTROLLER = {
         let method = "GET";
         let url = CONTROLLER.serverURL + CONTROLLER.realTimeURL;
         let data = {
-            imgBase64: DISPLAY.getPicToDataURL(),
+            imgBase64: TRACKER.getPicToDataURL(),
             faceFeatures: TRACKER.getFormatFaceFeatures(),
             currentPosition: null,
             saveSubPath: null,
@@ -649,7 +707,7 @@ let CONTROLLER = {
 
     getUserFeedbackHandler: (coords, round, isLoopInput, lastQuadrant) => {
         let newQuadrant = UTIL.coordsToQuadrant(coords);
-        let debouncedQuadrant = CONTROLLER.debounce(newQuadrant);
+        let debouncedQuadrant = CONTROLLER.debouncer.debounce(CONTROLLER.debouncer, newQuadrant);
         
         if(debouncedQuadrant == -1){
             // Noisy feedback. Continue getting feedback.
@@ -734,6 +792,23 @@ let CONTROLLER = {
 			CONTROLLER.saveRoundNum;
 	},
 
+    // Tests if the partialSequence is matching the primarySequence so far.
+    // Input: Two arrays
+    // e.g. primary = [1,2,3,2] partial = [1,2] returns true
+    isSequenceMatching: (primarySequence, partialSequence) => {
+        if(primarySequence.length == 0){
+            return true;
+        }if(partialSequence.length > primarySequence.length){
+            return false;
+        }for(var i=0; i<partialSequence.length; i++){
+            if(primarySequence[i] != partialSequence[i]){
+                return false;       
+            }else{
+                continue;   
+            }
+        }return true
+    },
+
     requestFullScreen: (element) => {
         // Supports most browsers and their versions.
         let requestMethod = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || element.msRequestFullScreen;
@@ -805,6 +880,8 @@ let CONTROLLER = {
 		    	window.URL.revokeObjectURL(url);
 			};
 	    }());
+
+        CONTROLLER.debouncer = UTIL.newDebouncer(CONTROLLER.debouncerLength);
     },
 
     // Shifts the array by the shift amount. Negative numbers mean
@@ -820,8 +897,7 @@ let CONTROLLER = {
 
     startActionSelect: () => {
         DISPLAY.drawActionPics();
-        CONTROLLER.clearDebouncer();
-        CONTROLLER.debouncerLength = CONTROLLER.aSDebounceLen;
+        CONTROLLER.debouncer = UTIL.newDebouncer(CONTROLLER.aSDebounceLen);
         CONTROLLER.isCanceled = false;
         CONTROLLER.getActionFeedback(-1);
     },
