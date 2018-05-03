@@ -186,7 +186,7 @@ let CONTROLLER = {
         CONTROLLER.isCanceled = false;
         CONTROLLER.isDone = false;
 		let currentPoint = -1;
-		let revCounter = 0; 
+		let revCounter = 0;
 
         UTIL.contrastMetrics = null;    
         let isFullScreenConfirm = confirm("I'd like to go fullscreen please")
@@ -248,7 +248,7 @@ let CONTROLLER = {
 
             newStep.then(()=>{
                 if((currentPoint * Math.round(1/CONTROLLER.eps) % picStep) / Math.round(1/CONTROLLER.eps) - CONTROLLER.eps < 0){
-                    if(CONTROLLER.useDLMODEL){
+                    if(CONTROLLER.useDLMODEL && false){
                         CONTROLLER.captureAtPointWithDL(currentPoint, perimeterPercent).then(()=>{
                             CONTROLLER._collectData(currentPoint, revCounter, perimeterPercent);
                         });
@@ -333,12 +333,11 @@ let CONTROLLER = {
 
         if(CONTROLLER.useDLMODEL){
             var wait = new Promise((resolve,reject) => {
-                DLMODEL.getCoords().then((coords)=>{
-                    setTimeout(()=>{
-                        resolve(coords);
-                    },CONTROLLER.DLMODELFeedbackDelay)
-                });
-            })
+                var coords = DLMODEL.getCoords()
+                setTimeout(()=>{
+                    resolve(coords);
+                },CONTROLLER.DLMODELFeedbackDelay)
+            });
             wait.then((coords)=>{
                 CONTROLLER.getActionFeedbackHandler(coords, lastQuadrant);
             });
@@ -403,12 +402,11 @@ let CONTROLLER = {
 		    		if(i++ < CONTROLLER.numPtsPerCenter){
 		    			if(CONTROLLER.useDLMODEL){
                             var wait = new Promise((resolve,reject) => {
-                                DLMODEL.getCoords().then((coords)=>{
-                                    setTimeout(()=>{
-                                        resolve(coords);
-                                    },CONTROLLER.DLMODELFeedbackDelay)
-                                });
-                            })
+                                var coords = DLMODEL.getCoords()
+                                setTimeout(()=>{
+                                    resolve(coords);
+                                },CONTROLLER.DLMODELFeedbackDelay)
+                            });
                             wait.then((coords)=>{
                                 UTIL.centerList.push(UTIL.parseCoords(coords));                            });
                         }else {
@@ -526,6 +524,7 @@ let CONTROLLER = {
         });
     },
 
+    // Gets the plot of the estimated points for the most recent trial.
     getPredictionPlot: () => {
         return new Promise((resolve,reject) => {
             let method = "GET";
@@ -559,6 +558,8 @@ let CONTROLLER = {
         return data;
     },
 
+    // Collects the data to be sent to the server when the dlModel is being use.
+    // We don't need the image anymore and we need to wait for the coords to be calculated
     getAnalyzeData: async (point, perimeterPercent) => {
         let [leftAvg, rightAvg] = UTIL.getEdgeMetric();
         let features = JSON.parse(TRACKER.getFormatFaceFeatures());
@@ -631,7 +632,7 @@ let CONTROLLER = {
                 setTimeout(()=>{
                     resolve(coords);
                 },CONTROLLER.DLMODELFeedbackDelay)
-            })
+            });
             wait.then((coords)=>{
                 CONTROLLER.getUserFeedbackHandler(coords, round, isLoopInput, lastQuadrant);
             });
